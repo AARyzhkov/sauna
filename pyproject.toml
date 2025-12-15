@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sauna"
+authors = [{name = "Alexander Ryzhkov", email = "Alexander_Ryzhkov@outlook.com"}]
+description = "SAUNA: A Python package for sensitivity and uncertainty analysis"
+readme = "README.md"
+dynamic = ["version"]
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+classifiers=[
+             "Development Status :: 4 - Beta",
+             "Intended Audience :: Developers",
+             "Intended Audience :: Science/Research",
+             "Intended Audience :: End Users/Desktop",
+             "Topic :: Scientific/Engineering",  
+             "License :: OSI Approved :: MIT License",  
+             "Natural Language :: English",
+             "Operating System :: POSIX :: Unix",        
+             "Programming Language :: Python :: 3",
+             "Programming Language :: Python :: 3.8",
+            ]
+
+dependencies = ["sandy", "serpentTools", "numpy", "scipy", "pandas", "matplotlib"]
+
+[project.optional-dependencies]
+docs = ["jupyter"]
+
+
+[tool.setuptools.packages.find]
+include = ["sauna*"]
+
+[tool.setuptools.dynamic]
+
+[project.urls]
+
+        
