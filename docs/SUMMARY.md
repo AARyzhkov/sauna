@@ -12,6 +12,7 @@
   * [Sensitivity Analysis](basics/theory-and-methodology/sensitivity-analysis.md)
   * [Uncertainty Analysis](basics/theory-and-methodology/uncertainty-analysis.md)
   * [Complex Sensitivities](basics/theory-and-methodology/complex-sensitivities.md)
+  * [Uncertainties of uncertainties](basics/theory-and-methodology/uncertainties-of-uncertainties.md)
   * [Technological Uncertainty](basics/theory-and-methodology/technological-uncertainty.md)
   * [Similarity Assessment](basics/theory-and-methodology/similarity-assessment.md)
   * [Target Accuracy Requirements](basics/theory-and-methodology/target-accuracy-requirements.md)

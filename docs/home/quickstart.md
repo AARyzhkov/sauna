@@ -24,6 +24,8 @@ and make sure to upgrade pip before moving to the [From Source](quickstart.md#fr
 pip3 install --upgrade pip
 ```
 
+### External tools
+
 Though [NJOY](https://github.com/njoy/NJOY2016) is an exception and has to be installed manually for processing covariance data. One should go to [the official NJOY GitHub repository](https://github.com/njoy/NJOY2016) for further instructions. Still, one shall have git, cmake, and Fortran to properly compile NJOY. They may be installed via the following line:
 
 ```bash
@@ -40,7 +42,9 @@ Firstly, clone the repository via the following command:
 git clone https://github.com/AARyzhkov/sauna.git
 ```
 
-Then, run from the SAUNA root pip install:
+#### via pip
+
+Then, run from the SAUNA root pip install (there is a point at the end of the second line):
 
 ```
 cd sauna
@@ -48,6 +52,8 @@ pip3 install .
 ```
 
 This concludes the installation process.
+
+#### via path
 
 An alternative to the `pip install` way is to ensure the package is included in your system's `$PYTHONPATH$` environment variable by adding the appropriate directory. The package can also be added directly in your Python code:
 
