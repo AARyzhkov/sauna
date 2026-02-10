@@ -32,6 +32,12 @@ Though [NJOY](https://github.com/njoy/NJOY2016) is an exception and has to be in
 sudo apt install git cmake gfortran
 ```
 
+After NJOY is installed, make sure a path to the NJOY executable is provided in the following manner:
+
+```shellscript
+export NJOY='/home/your-username/NJOY2016/build/njoy'
+```
+
 The other external tool is [AMPX](https://www.ornl.gov/onramp/ampx), developed by Oak Ridge National Laboratory (ORNL), and used here only for reading the COVERX format. Since the usual way to get the data in the format is to get [the SCALE code system](https://scale-manual-does.ornl.gov/), it is assumed that the AMPX is installed alongside SCALE. The other possible way is to get AMPX from [the official ORNL GitLab repository](https://code.ornl.gov/scale/code/scale-public) (though it has not been tested here).
 
 ### From Source
