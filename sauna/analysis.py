@@ -1099,6 +1099,8 @@ class Analysis():
                 Return the functional uncertainty 
 
             """  
+            delayed_used = ('beta' in functional) | ('lambda' in functional)
+            
             sum = 0
 
             for row in indices:
@@ -1107,9 +1109,13 @@ class Analysis():
                 zam = zams[row]
     
                 base_diag = uncertainties[int(row*group_number):int((row+1)*group_number)]
-                new_diag = uncertainties_to_minimize[int(row*group_number):int((row+1)*group_number)]
+                new_diag  = uncertainties_to_minimize[int(row*group_number):int((row+1)*group_number)]
     
                 for cov in temp_covs[row]:
+                    if ~delayed_used & ((cov.reaction_1 == 456) | (cov.reaction_2 == 456) | (cov.reaction_1 == 455) | (cov.reaction_2 == 455)):
+                        continue
+                    elif delayed_used & ((cov.reaction_1 == 452) | (cov.reaction_2 == 452)):
+                        continue
                     symm_coef = 1
                     if (cov.zam_1 == zam) & (cov.reaction_1 == mt):
                         sens_1 = next(sens for sens in zam_senses[model_index] if (sens.functional == functional) & (sens.zam == zam) & (sens.reaction == mt))
