@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import scipy.optimize
-import copy
-
+from copy import deepcopy
 
 class Analysis():
     """A static class responsible for the routines, related
@@ -1080,8 +1079,8 @@ class Analysis():
         # 3 Solve the problem using the auxiliry functions
         # 4 Move data from the results to the new covariances
 
-        if lower_boundary < 0:
-            raise ValueError('Make the lower_boundary parameter more than or equal to zero.')
+        if lower_boundary <= 0:
+            lower_boundary = 1e-5
         
 
         # Variables for iteration
