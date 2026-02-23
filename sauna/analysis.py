@@ -876,6 +876,140 @@ class Analysis():
         return uncertainties
 
     @classmethod
+    def _define_cost(cls, zam, reaction, cost_type='A'):
+        """Provide the cost function coefficitne (lambda) based upon the
+        type according to WPEC/SG26.
+         
+        Parameters
+        ----------
+        zam : float
+            ZAM value for the nuclide of interest
+        reaction : int
+            MT number for the reaction of interest
+        cost_type : str
+            Cost type according to the WPEC/SG26 variants.
+            'A', 'B', 'C' are the allowed values.
+
+        Return
+        ------
+        float
+            Return a float as a multiplication factor for the cost function.
+        
+        Notes
+        -----
+        WPEC/SG26 did not provide the values for a number of reactions. The
+        costs for such reactions are taken the same as inelastic scattering.
+
+        """
+
+        if cost_type not in ('A', 'B', 'C'):
+            raise NotImplementedError(f"The cost type '{cost_type}' is not implemented, only 'A', 'B', and 'C' are supported.")
+
+        if (zam in (922350, 922380, 942390)) & (reaction in (18, 102, 452)):
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 1
+            elif cost_type == 'C':
+                cost_coefficient = 1
+        elif (zam >= 900000) & (reaction in (18, 102, 452)):
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 2
+            elif cost_type == 'C':
+                cost_coefficient = 2
+        elif (zam < 900000) & (reaction == 102):
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 1
+            elif cost_type == 'C':
+                cost_coefficient = 1
+        elif reaction == 2:
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 1
+            elif cost_type == 'C':
+                cost_coefficient = 1
+        elif reaction == 4:
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 3
+            elif cost_type == 'C':
+                cost_coefficient = 10
+        else:
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 3
+            elif cost_type == 'C':
+                cost_coefficient = 10
+
+        return cost_coefficient
+
+    @classmethod
+    def _weight_function(cls, uncertainties_to_minimize, costs, base_uncertainties):
+        """An auxiliary function to calculates the sum of the weighted inverse
+        variances weight_i/uncertainties_i**2.
+
+        Parameters
+        ----------
+        uncertainties_to_minimize : numpy.ndarray
+            Values to propagate the uncertainities 
+        costs : numpy.ndarray
+            Cost coefficients corresponding to the uncertainty being minimized.
+        base_uncertainties : numpy.ndarray
+            Base values of the uncertainties being minimized to make sure that
+            zero value uncertainties are still.
+            
+        Return
+        ------
+        float
+            Return the sum 
+
+        """  
+
+        # The function assumes that the the initial uncertainties
+        # do not depend on uncertainties_to_minimize and returns
+        # always zero for them. If the values are set at zero only
+        # if the uncertainties_to_minimize, the optimizer yields 
+        # inaccurate results
+        return np.sum(np.where(base_uncertainties == 0, 0, costs / (uncertainties_to_minimize * uncertainties_to_minimize)))
+
+    @classmethod
+    def _weight_jacobian(cls, uncertainties_to_minimize, costs, base_uncertainties):
+        """An auxiliary function to calculates the Jacobian of
+        the sum of the weighted inverse variances, which is
+        -2*weight_i/uncertainties_i**3.
+
+        Parameters
+        ----------
+        uncertainties_to_minimize : numpy.ndarray
+            Values to propagate the uncertainities
+        costs : numpy.ndarray
+            Cost coefficients corresponding to the uncertainty being minimized.
+        base_uncertainties : numpy.ndarray
+            Base values of the uncertainties being minimized to make sure that
+            zero value uncertainties are still.
+        Return
+        ------
+        numpy.ndarray
+            Return the Jacobian
+
+        """  
+
+        # The function assumes that the the initial uncertainties
+        # do not depend on uncertainties_to_minimize and returns
+        # always zero for them. If the values are set at zero only
+        # if the uncertainties_to_minimize, the optimizer yield 
+        # inaccurate results
+              
+        return np.where(base_uncertainties == 0, 0, (-2 * costs) / uncertainties_to_minimize**3)
+
+    @classmethod
     def tars(cls, model_sensitivities, covariances, tars, number_of_reactions=10, lower_boundary=0.005, method='trust-constr', cost_type='A', energy_costs = None, maxiter=1000, tol = 1e-5):
         """Calculates target accuracy requirements based upon
         a Sensitivities instance, an Uncertainties instance
@@ -968,53 +1102,6 @@ class Analysis():
         if energy_costs == None:
             energy_costs.extend([1]*group_number)
 
-        # Cost Function
-        def define_cost(zam, reaction, cost_type='A'):
-            if (zam in (922350, 922380, 942390)) & (reaction in (18, 102, 452)):
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 1
-                elif cost_type == 'C':
-                    cost_coefficient = 1
-            elif (zam >= 900000) & (reaction in (18, 102, 452)):
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 2
-                elif cost_type == 'C':
-                    cost_coefficient = 2
-            elif (zam < 900000) & (reaction == 102):
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 1
-                elif cost_type == 'C':
-                    cost_coefficient = 1
-            elif reaction == 2:
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 1
-                elif cost_type == 'C':
-                    cost_coefficient = 1
-            elif reaction == 4:
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 3
-                elif cost_type == 'C':
-                    cost_coefficient = 10
-            else:
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 3
-                elif cost_type == 'C':
-                    cost_coefficient = 10
-
-            return cost_coefficient
-
         # Get dataframe for the uncertainty sources
         # Get MTs present in the dataframe to avoid accounting others
         # Remove cross-correlations, cross-correations are fixed during next step
@@ -1041,8 +1128,7 @@ class Analysis():
                         zam_mt.append((zam, mt))
                         zams.append(zam)
                         reactions.append(mt)
-                        costs.extend([define_cost(zam, mt, cost_type)]*group_number)
-
+                        costs.extend([cls._define_cost(zam, mt, cost_type)]*group_number)
 
                         cov = covariances.get_by_params(zam, zam, mt, mt)
 
@@ -1165,67 +1251,20 @@ class Analysis():
                 tar_constraint = scipy.optimize.NonlinearConstraint(lambda x, functional=functional, model_index=s, sensitivities=sensitivities: sandwich_constraint(x,functional,model_index,sensitivities) , 0, tars[functional]**2,
                                                             jac = 'cs', hess = scipy.optimize.SR1())
                 tar_constraints.append(tar_constraint)
-        
-        # Weight functions to be minimized
-        def weight_function(uncertainties_to_minimize):
-            """An auxiliary function to calculates the sum of
-            the weighted inverse variances weight_i/uncertainties_i**2.
-
-            Parameters
-            ----------
-            uncertainties_to_minimize : numpy.ndarray
-                values to propagate the uncertainities
-
-            Return
-            ------
-            float
-                Return the sum 
-
-            """  
-
-            # The function assumes that the the initial uncertainties
-            # do not depend on uncertainties_to_minimize and returns
-            # always zero for them. If the values are set at zero only
-            # if the uncertainties_to_minimize, the optimizer yield 
-            # inaccurate results
-            return np.sum([0 if unc == 0 else lambda_i/target**2 for unc, target, lambda_i in zip(uncertainties, uncertainties_to_minimize, costs)])
-
-        def weight_jacobian(uncertainties_to_minimize):
-            """An auxiliary function to calculates the Jacobian of
-            the sum of the weighted inverse variances, which is
-            -2*weight_i/uncertainties_i**3.
-
-            Parameters
-            ----------
-            uncertainties_to_minimize : numpy.ndarray
-                values to propagate the uncertainities
-
-            Return
-            ------
-            numpy.ndarray
-                Return the Jacobian
-
-
-            """  
-
-            # The function assumes that the the initial uncertainties
-            # do not depend on uncertainties_to_minimize and returns
-            # always zero for them. If the values are set at zero only
-            # if the uncertainties_to_minimize, the optimizer yield 
-            # inaccurate results
-          
-            return [0 if unc == 0 else -2*lambda_i/target**3 for unc, target, lambda_i in zip(uncertainties, uncertainties_to_minimize, costs)]
 
         if method == 'trust-constr':
             
             bounds = scipy.optimize.Bounds(lower_boundaries, upper_boundaries)
 
-            res = scipy.optimize.minimize(weight_function, uncertainties, method = 'trust-constr',
-                                                       jac = weight_jacobian, hess = scipy.optimize.SR1(),
-                                                       constraints = tar_constraints,
-                                                       options = {'disp': True,  'maxiter': maxiter},
-                                                       tol =  tol,
-                                                       bounds = bounds)     
+            res = scipy.optimize.minimize(lambda x, costs=costs, base_uncertainties=uncertainties: cls._weight_function(x, costs, uncertainties),
+                                          uncertainties,
+                                          method = 'trust-constr',
+                                          jac = lambda x, costs=costs, base_uncertainties=uncertainties: cls._weight_jacobian(x, costs, uncertainties),
+                                          hess = scipy.optimize.SR1(),
+                                          constraints = tar_constraints,
+                                          options = {'disp': True,  'maxiter': maxiter},
+                                          tol =  tol,
+                                          bounds = bounds)        
         else:
             raise NotImplementedError(f'The set method {method} is not implemented.')
 
@@ -1270,8 +1309,8 @@ class Analysis():
                 new_outer  = np.outer(first_new, second_new)
                 cov.dataframe[:] = cor * new_outer   
 
-        base_cost = weight_function(uncertainties)
-        final_cost = weight_function(optimized_uncertainties)
+        base_cost  = cls._weight_function(uncertainties, costs, uncertainties)
+        final_cost = cls._weight_function(optimized_uncertainties, costs, uncertainties)
         cost = final_cost - base_cost
 
         print('The total number of symmmetric covariances tweaked:', len(zam_mt))
