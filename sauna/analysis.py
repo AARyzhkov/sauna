@@ -1082,7 +1082,6 @@ class Analysis():
         if lower_boundary <= 0:
             lower_boundary = 1e-5
         
-
         # Variables for iteration
         group_number = len(covariances.group_structure) - 1
         base_indices = np.arange(number_of_reactions)
@@ -1099,7 +1098,7 @@ class Analysis():
         costs = []
         
         if energy_costs == None:
-            energy_costs.extend([1]*group_number)
+            energy_costs = [1]*group_number
 
         # Get dataframe for the uncertainty sources
         # Get MTs present in the dataframe to avoid accounting others
@@ -1146,6 +1145,7 @@ class Analysis():
 
         # Update indices for all the functionals present
         indices = np.arange(len(zam_mt))
+        uncertainty_indices = np.append(indices*group_number, [(indices[-1]+1)*group_number])
 
         # Prepare covariance list which is going to be accessed during the
         # optimization
@@ -1202,8 +1202,8 @@ class Analysis():
                 mt  = reactions[row]
                 zam = zams[row]
     
-                base_diag = uncertainties[int(row*group_number):int((row+1)*group_number)]
-                new_diag  = uncertainties_to_minimize[int(row*group_number):int((row+1)*group_number)]
+                base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
+                new_diag  = uncertainties_to_minimize[uncertainty_indices[row]:uncertainty_indices[row+1]]
     
                 for cov in temp_covs[row]:
                     if ~delayed_used & ((cov.reaction_1 == 456) | (cov.reaction_2 == 456) | (cov.reaction_1 == 455) | (cov.reaction_2 == 455)):
@@ -1284,8 +1284,8 @@ class Analysis():
             changed_covariances.append((zam,mt))
 
             temp_covs = [cov for cov in zam_covs if ((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt))]
-            base_diag = uncertainties[int(row*group_number):int((row+1)*group_number)]
-            new_diag = optimized_uncertainties[int(row*group_number):int((row+1)*group_number)]
+            base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
+            new_diag  = optimized_uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
             
             for cov in temp_covs:
                 if (cov.zam_1 == zam) & (cov.reaction_1 == mt):
