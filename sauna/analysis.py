@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import scipy.optimize
-import copy
-
+from copy import deepcopy
 
 class Analysis():
     """A static class responsible for the routines, related
@@ -876,6 +875,140 @@ class Analysis():
         return uncertainties
 
     @classmethod
+    def _define_cost(cls, zam, reaction, cost_type='A'):
+        """Provide the cost function coefficitne (lambda) based upon the
+        type according to WPEC/SG26.
+         
+        Parameters
+        ----------
+        zam : float
+            ZAM value for the nuclide of interest
+        reaction : int
+            MT number for the reaction of interest
+        cost_type : str
+            Cost type according to the WPEC/SG26 variants.
+            'A', 'B', 'C' are the allowed values.
+
+        Return
+        ------
+        float
+            Return a float as a multiplication factor for the cost function.
+        
+        Notes
+        -----
+        WPEC/SG26 did not provide the values for a number of reactions. The
+        costs for such reactions are taken the same as inelastic scattering.
+
+        """
+
+        if cost_type not in ('A', 'B', 'C'):
+            raise NotImplementedError(f"The cost type '{cost_type}' is not implemented, only 'A', 'B', and 'C' are supported.")
+
+        if (zam in (922350, 922380, 942390)) & (reaction in (18, 102, 452)):
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 1
+            elif cost_type == 'C':
+                cost_coefficient = 1
+        elif (zam >= 900000) & (reaction in (18, 102, 452)):
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 2
+            elif cost_type == 'C':
+                cost_coefficient = 2
+        elif (zam < 900000) & (reaction == 102):
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 1
+            elif cost_type == 'C':
+                cost_coefficient = 1
+        elif reaction == 2:
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 1
+            elif cost_type == 'C':
+                cost_coefficient = 1
+        elif reaction == 4:
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 3
+            elif cost_type == 'C':
+                cost_coefficient = 10
+        else:
+            if cost_type == 'A':
+                cost_coefficient = 1
+            elif cost_type == 'B':
+                cost_coefficient = 3
+            elif cost_type == 'C':
+                cost_coefficient = 10
+
+        return cost_coefficient
+
+    @classmethod
+    def _weight_function(cls, uncertainties_to_minimize, costs, base_uncertainties):
+        """An auxiliary function to calculates the sum of the weighted inverse
+        variances weight_i/uncertainties_i**2.
+
+        Parameters
+        ----------
+        uncertainties_to_minimize : numpy.ndarray
+            Values to propagate the uncertainities 
+        costs : numpy.ndarray
+            Cost coefficients corresponding to the uncertainty being minimized.
+        base_uncertainties : numpy.ndarray
+            Base values of the uncertainties being minimized to make sure that
+            zero value uncertainties are still.
+            
+        Return
+        ------
+        float
+            Return the sum 
+
+        """  
+
+        # The function assumes that the the initial uncertainties
+        # do not depend on uncertainties_to_minimize and returns
+        # always zero for them. If the values are set at zero only
+        # if the uncertainties_to_minimize, the optimizer yields 
+        # inaccurate results
+        return np.sum(np.where(base_uncertainties == 0, 0, costs / (uncertainties_to_minimize * uncertainties_to_minimize)))
+
+    @classmethod
+    def _weight_jacobian(cls, uncertainties_to_minimize, costs, base_uncertainties):
+        """An auxiliary function to calculates the Jacobian of
+        the sum of the weighted inverse variances, which is
+        -2*weight_i/uncertainties_i**3.
+
+        Parameters
+        ----------
+        uncertainties_to_minimize : numpy.ndarray
+            Values to propagate the uncertainities
+        costs : numpy.ndarray
+            Cost coefficients corresponding to the uncertainty being minimized.
+        base_uncertainties : numpy.ndarray
+            Base values of the uncertainties being minimized to make sure that
+            zero value uncertainties are still.
+        Return
+        ------
+        numpy.ndarray
+            Return the Jacobian
+
+        """  
+
+        # The function assumes that the the initial uncertainties
+        # do not depend on uncertainties_to_minimize and returns
+        # always zero for them. If the values are set at zero only
+        # if the uncertainties_to_minimize, the optimizer yield 
+        # inaccurate results
+              
+        return np.where(base_uncertainties == 0, 0, (-2 * costs) / uncertainties_to_minimize**3)
+
+    @classmethod
     def tars(cls, model_sensitivities, covariances, tars, number_of_reactions=10, lower_boundary=0.005, method='trust-constr', cost_type='A', energy_costs = None, maxiter=1000, tol = 1e-5):
         """Calculates target accuracy requirements based upon
         a Sensitivities instance, an Uncertainties instance
@@ -941,83 +1074,29 @@ class Analysis():
         """   
 
         # The code is structured as follows:
-        # 1 Create a list of uncertainties and other params for the optimization problem
-        # 2 Create auxiliary functions to run the problem
-        # 3 Solve the problem using the auxiliry functions
+        # 1 Prepare the input data
+        # 2 Create uncertainty propagation auxiliary function
+        # 3 Create scipy-related instances and run the optimization
         # 4 Move data from the results to the new covariances
 
-        if lower_boundary < 0:
-            raise ValueError('Make the lower_boundary parameter more than or equal to zero.')
+        ######################
+        # The first part
+        ######################
+        if lower_boundary <= 0:
+            lower_boundary = 1e-5
         
-
         # Variables for iteration
         group_number = len(covariances.group_structure) - 1
         base_indices = np.arange(number_of_reactions)
         
-        # Prepare individual sensitivities and uncertainties to be used
-        # for the optimization
-        uncertainties = []
-        zams = []
-        reactions = []
-        zam_covs = []
-        zam_mt = []
-        all_reactions = set()
-        dfs = []
-        costs = []
-        
         if energy_costs == None:
-            energy_costs.extend([1]*group_number)
-
-        # Cost Function
-        def define_cost(zam, reaction, cost_type='A'):
-            if (zam in (922350, 922380, 942390)) & (reaction in (18, 102, 452)):
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 1
-                elif cost_type == 'C':
-                    cost_coefficient = 1
-            elif (zam >= 900000) & (reaction in (18, 102, 452)):
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 2
-                elif cost_type == 'C':
-                    cost_coefficient = 2
-            elif (zam < 900000) & (reaction == 102):
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 1
-                elif cost_type == 'C':
-                    cost_coefficient = 1
-            elif reaction == 2:
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 1
-                elif cost_type == 'C':
-                    cost_coefficient = 1
-            elif reaction == 4:
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 3
-                elif cost_type == 'C':
-                    cost_coefficient = 10
-            else:
-                if cost_type == 'A':
-                    cost_coefficient = 1
-                elif cost_type == 'B':
-                    cost_coefficient = 3
-                elif cost_type == 'C':
-                    cost_coefficient = 10
-
-            return cost_coefficient
+            energy_costs = [1]*group_number
 
         # Get dataframe for the uncertainty sources
         # Get MTs present in the dataframe to avoid accounting others
         # Remove cross-correlations, cross-correations are fixed during next step
+        all_reactions = set()
+        dfs = []
         for sensitivities in model_sensitivities:
             model_dfs = {}
             for functional in tars:
@@ -1028,6 +1107,12 @@ class Analysis():
             dfs.append(model_dfs)
 
         # Populate list of uncertainties_to_minimize based upon the number of reactions
+        uncertainties = []
+        zams = []
+        reactions = []
+        zam_covs = []
+        zam_mt = []
+        costs = []
         for s, sensitivities in enumerate(model_sensitivities):
             for functional in tars:
                 for row in base_indices:
@@ -1041,8 +1126,7 @@ class Analysis():
                         zam_mt.append((zam, mt))
                         zams.append(zam)
                         reactions.append(mt)
-                        costs.extend([define_cost(zam, mt, cost_type)]*group_number)
-
+                        costs.extend([cls._define_cost(zam, mt, cost_type)]*group_number)
 
                         cov = covariances.get_by_params(zam, zam, mt, mt)
 
@@ -1050,17 +1134,19 @@ class Analysis():
                         diag = np.diag(cov.dataframe.to_numpy())
                         uncertainties.extend(np.sqrt(diag))
         
+        uncertainties = np.array(uncertainties)
+
         # Redefine energy costs 
         energy_costs = energy_costs * int(len(uncertainties)/group_number)
-        costs = np.multiply(costs,energy_costs)
-
+        costs = np.multiply(costs, energy_costs)
 
         # Populate list of covs which are going to be tweaked
+        # This list includes both cross-material and cross-reaction correlations
         zam_covs = [cov for cov in zam_covs if cov.reaction_1 in all_reactions]
-
 
         # Update indices for all the functionals present
         indices = np.arange(len(zam_mt))
+        uncertainty_indices = np.append(indices*group_number, [(indices[-1]+1)*group_number])
 
         # Prepare covariance list which is going to be accessed during the
         # optimization
@@ -1069,7 +1155,7 @@ class Analysis():
             mt  = reactions[row]
             zam = zams[row]
             temp_covs.append([cov for cov in zam_covs if (((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt)))])
-            
+
         # Prepare sensitivity list which is going to be accessed during the
         # optimization
         temp_senses = []
@@ -1087,39 +1173,48 @@ class Analysis():
                             model_senses[(functional, cov.zam_2, cov.reaction_2)] = sensitivities.get_by_params(functional, cov.zam_2, cov.reaction_2)
 
             temp_senses.append(model_senses)
+
         # Constraints for uncertainties: (unc_i)_min <= unc_i <= (unc_i)_0
-        lower_boundaries = [unc if unc < lower_boundary else lower_boundary for unc in uncertainties]
+        lower_boundaries = np.array([unc if unc < lower_boundary else lower_boundary for unc in uncertainties])
         upper_boundaries = uncertainties.copy()
 
-         # Sandwich formula functions to be constrained to TAR
-        def sandwich_constraint(uncertainties_to_minimize, functional, model_index, sensitivities):
+        ######################
+        # The second part
+        ######################
+        # Sandwich formula functions to be constrained to TAR
+        def sandwich_constraint(uncertainties_to_minimize, functional, model_index):
             """An auxiliary function to propagate uncertainties
-            from given uncertainties, sensitivities are taken from the
-            parental method - tars(cls,...).
+            from given uncertainties.
 
             Parameters
             ----------
             uncertainties_to_minimize : numpy.ndarray
-                values to propagate the uncertainities
+                Values to propagate the uncertainities
+            functional : str
+                Functional name to access the sensitivity for a chosen 
+                functional and propagate the uncertainties.
+            model_index : int
+                Index for a model which the uncertainties are propagated
+                for.
             
             Return
             ------
             float
-                Return the functional uncertainty 
+                Return the functional variance 
 
             """  
             delayed_used = ('beta' in functional) | ('lambda' in functional)
-            
-            sum = 0
+
+            variance = 0
 
             for row in indices:
             
                 mt  = reactions[row]
                 zam = zams[row]
     
-                base_diag = uncertainties[int(row*group_number):int((row+1)*group_number)]
-                new_diag  = uncertainties_to_minimize[int(row*group_number):int((row+1)*group_number)]
-    
+                base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
+                new_diag  = uncertainties_to_minimize[uncertainty_indices[row]:uncertainty_indices[row+1]]
+                
                 for cov in temp_covs[row]:
                     if ~delayed_used & ((cov.reaction_1 == 456) | (cov.reaction_2 == 456) | (cov.reaction_1 == 455) | (cov.reaction_2 == 455)):
                         continue
@@ -1148,92 +1243,52 @@ class Analysis():
 
                     matrix     = cov.dataframe.to_numpy()
                     base_outer = np.outer(first_base, second_base)
-                    cor        = np.divide(matrix, base_outer, out=np.zeros_like(matrix), where= base_outer != 0 )
+                    cor        = np.divide(matrix, base_outer, out = np.zeros_like(matrix), where = base_outer != 0 )
                     new_outer  = np.outer(first_new, second_new)
                     new_cov_mat  = cor * new_outer   
                     sandwich = sens_1.sensitivity_vector @ new_cov_mat @ sens_2.sensitivity_vector
-                    sum +=  symm_coef * sandwich
+                    variance +=  symm_coef * sandwich
 
-            uncertainty = sum
-            print(f'Model {model_index} {functional}:', np.sqrt(uncertainty).real)
-            return uncertainty
+            print(f'Model {model_index} {functional}:', np.sqrt(variance).real)
+            return variance
 
+        ######################
+        # The third part
+        ######################
         # Non-linear constraints for trust-constr
         tar_constraints = []
         for s, sensitivities in enumerate(model_sensitivities):
             for functional in tars:
-                tar_constraint = scipy.optimize.NonlinearConstraint(lambda x, functional=functional, model_index=s, sensitivities=sensitivities: sandwich_constraint(x,functional,model_index,sensitivities) , 0, tars[functional]**2,
-                                                            jac = 'cs', hess = scipy.optimize.SR1())
+                tar_constraint = scipy.optimize.NonlinearConstraint(lambda x, functional=functional, model_index=s: sandwich_constraint(x, functional, model_index),
+                                                                    0, tars[functional]**2,
+                                                                    jac = 'cs', 
+                                                                    hess = scipy.optimize.SR1())
                 tar_constraints.append(tar_constraint)
-        
-        # Weight functions to be minimized
-        def weight_function(uncertainties_to_minimize):
-            """An auxiliary function to calculates the sum of
-            the weighted inverse variances weight_i/uncertainties_i**2.
-
-            Parameters
-            ----------
-            uncertainties_to_minimize : numpy.ndarray
-                values to propagate the uncertainities
-
-            Return
-            ------
-            float
-                Return the sum 
-
-            """  
-
-            # The function assumes that the the initial uncertainties
-            # do not depend on uncertainties_to_minimize and returns
-            # always zero for them. If the values are set at zero only
-            # if the uncertainties_to_minimize, the optimizer yield 
-            # inaccurate results
-            return np.sum([0 if unc == 0 else lambda_i/target**2 for unc, target, lambda_i in zip(uncertainties, uncertainties_to_minimize, costs)])
-
-        def weight_jacobian(uncertainties_to_minimize):
-            """An auxiliary function to calculates the Jacobian of
-            the sum of the weighted inverse variances, which is
-            -2*weight_i/uncertainties_i**3.
-
-            Parameters
-            ----------
-            uncertainties_to_minimize : numpy.ndarray
-                values to propagate the uncertainities
-
-            Return
-            ------
-            numpy.ndarray
-                Return the Jacobian
-
-
-            """  
-
-            # The function assumes that the the initial uncertainties
-            # do not depend on uncertainties_to_minimize and returns
-            # always zero for them. If the values are set at zero only
-            # if the uncertainties_to_minimize, the optimizer yield 
-            # inaccurate results
-          
-            return [0 if unc == 0 else -2*lambda_i/target**3 for unc, target, lambda_i in zip(uncertainties, uncertainties_to_minimize, costs)]
 
         if method == 'trust-constr':
             
             bounds = scipy.optimize.Bounds(lower_boundaries, upper_boundaries)
 
-            res = scipy.optimize.minimize(weight_function, uncertainties, method = 'trust-constr',
-                                                       jac = weight_jacobian, hess = scipy.optimize.SR1(),
-                                                       constraints = tar_constraints,
-                                                       options = {'disp': True,  'maxiter': maxiter},
-                                                       tol =  tol,
-                                                       bounds = bounds)     
+            res = scipy.optimize.minimize(lambda x, costs=costs, base_uncertainties=uncertainties: cls._weight_function(x, costs, uncertainties),
+                                          uncertainties,
+                                          method = 'trust-constr',
+                                          jac = lambda x, costs=costs, base_uncertainties=uncertainties: cls._weight_jacobian(x, costs, uncertainties),
+                                          hess = scipy.optimize.SR1(),
+                                          constraints = tar_constraints,
+                                          options = {'disp': True,  'maxiter': maxiter},
+                                          tol =  tol,
+                                          bounds = bounds)     
         else:
             raise NotImplementedError(f'The set method {method} is not implemented.')
 
-        optimized_uncertainties = [0 if unc == 0 else target for unc, target in zip(uncertainties, res.x)]
+        ######################
+        # The fourth part
+        ######################
+        optimized_uncertainties = np.where(uncertainties == 0, 0, res.x)
         print(optimized_uncertainties)
 
         # Completely copies the main covariances to avoid rewriting them
-        target_covariances = copy.deepcopy(covariances)
+        target_covariances = deepcopy(covariances)
         
         # Get covs with the zams of interest
         zam_covs = []
@@ -1245,11 +1300,11 @@ class Analysis():
             zam = zams[row]
             changed_covariances.append((zam,mt))
 
-            temp_covs = [cov for cov in zam_covs if ((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt))]
-            base_diag = uncertainties[int(row*group_number):int((row+1)*group_number)]
-            new_diag = optimized_uncertainties[int(row*group_number):int((row+1)*group_number)]
+            temp_covs_2 = [cov for cov in zam_covs if ((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt))]
+            base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
+            new_diag  = optimized_uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
             
-            for cov in temp_covs:
+            for cov in temp_covs_2:
                 if (cov.zam_1 == zam) & (cov.reaction_1 == mt):
                     first_new = new_diag
                     first_base = base_diag
@@ -1270,32 +1325,14 @@ class Analysis():
                 new_outer  = np.outer(first_new, second_new)
                 cov.dataframe[:] = cor * new_outer   
 
-        base_cost = weight_function(uncertainties)
-        final_cost = weight_function(optimized_uncertainties)
+        base_cost  = cls._weight_function(uncertainties, costs, uncertainties)
+        final_cost = cls._weight_function(optimized_uncertainties, costs, uncertainties)
         cost = final_cost - base_cost
 
         print('The total number of symmmetric covariances tweaked:', len(zam_mt))
-        print('The tweaked covariances:', changed_covariances)
+        print('The tweaked symmetric covariances:', changed_covariances)
         print('The base cost function:', base_cost)
         print('The cost function:', final_cost)
         print('The net cost:', cost)
 
         return target_covariances
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
