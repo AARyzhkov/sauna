@@ -1074,11 +1074,14 @@ class Analysis():
         """   
 
         # The code is structured as follows:
-        # 1 Create a list of uncertainties and other params for the optimization problem
-        # 2 Create auxiliary functions to run the problem
-        # 3 Solve the problem using the auxiliry functions
+        # 1 Prepare the input data
+        # 2 Create uncertainty propagation auxiliary function
+        # 3 Create scipy-related instances and run the optimization
         # 4 Move data from the results to the new covariances
 
+        ######################
+        # The first part
+        ######################
         if lower_boundary <= 0:
             lower_boundary = 1e-5
         
@@ -1086,23 +1089,14 @@ class Analysis():
         group_number = len(covariances.group_structure) - 1
         base_indices = np.arange(number_of_reactions)
         
-        # Prepare individual sensitivities and uncertainties to be used
-        # for the optimization
-        uncertainties = []
-        zams = []
-        reactions = []
-        zam_covs = []
-        zam_mt = []
-        all_reactions = set()
-        dfs = []
-        costs = []
-        
         if energy_costs == None:
             energy_costs = [1]*group_number
 
         # Get dataframe for the uncertainty sources
         # Get MTs present in the dataframe to avoid accounting others
         # Remove cross-correlations, cross-correations are fixed during next step
+        all_reactions = set()
+        dfs = []
         for sensitivities in model_sensitivities:
             model_dfs = {}
             for functional in tars:
@@ -1113,6 +1107,12 @@ class Analysis():
             dfs.append(model_dfs)
 
         # Populate list of uncertainties_to_minimize based upon the number of reactions
+        uncertainties = []
+        zams = []
+        reactions = []
+        zam_covs = []
+        zam_mt = []
+        costs = []
         for s, sensitivities in enumerate(model_sensitivities):
             for functional in tars:
                 for row in base_indices:
@@ -1134,14 +1134,15 @@ class Analysis():
                         diag = np.diag(cov.dataframe.to_numpy())
                         uncertainties.extend(np.sqrt(diag))
         
+        uncertainties = np.array(uncertainties)
+
         # Redefine energy costs 
         energy_costs = energy_costs * int(len(uncertainties)/group_number)
-        costs = np.multiply(costs,energy_costs)
-
+        costs = np.multiply(costs, energy_costs)
 
         # Populate list of covs which are going to be tweaked
+        # This list includes both cross-material and cross-reaction correlations
         zam_covs = [cov for cov in zam_covs if cov.reaction_1 in all_reactions]
-
 
         # Update indices for all the functionals present
         indices = np.arange(len(zam_mt))
@@ -1154,7 +1155,7 @@ class Analysis():
             mt  = reactions[row]
             zam = zams[row]
             temp_covs.append([cov for cov in zam_covs if (((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt)))])
-            
+
         # Prepare sensitivity list which is going to be accessed during the
         # optimization
         temp_senses = []
@@ -1172,30 +1173,39 @@ class Analysis():
                             model_senses[(functional, cov.zam_2, cov.reaction_2)] = sensitivities.get_by_params(functional, cov.zam_2, cov.reaction_2)
 
             temp_senses.append(model_senses)
+
         # Constraints for uncertainties: (unc_i)_min <= unc_i <= (unc_i)_0
-        lower_boundaries = [unc if unc < lower_boundary else lower_boundary for unc in uncertainties]
+        lower_boundaries = np.array([unc if unc < lower_boundary else lower_boundary for unc in uncertainties])
         upper_boundaries = uncertainties.copy()
 
-         # Sandwich formula functions to be constrained to TAR
-        def sandwich_constraint(uncertainties_to_minimize, functional, model_index, sensitivities):
+        ######################
+        # The second part
+        ######################
+        # Sandwich formula functions to be constrained to TAR
+        def sandwich_constraint(uncertainties_to_minimize, functional, model_index):
             """An auxiliary function to propagate uncertainties
-            from given uncertainties, sensitivities are taken from the
-            parental method - tars(cls,...).
+            from given uncertainties.
 
             Parameters
             ----------
             uncertainties_to_minimize : numpy.ndarray
-                values to propagate the uncertainities
+                Values to propagate the uncertainities
+            functional : str
+                Functional name to access the sensitivity for a chosen 
+                functional and propagate the uncertainties.
+            model_index : int
+                Index for a model which the uncertainties are propagated
+                for.
             
             Return
             ------
             float
-                Return the functional uncertainty 
+                Return the functional variance 
 
             """  
             delayed_used = ('beta' in functional) | ('lambda' in functional)
-            
-            sum = 0
+
+            variance = 0
 
             for row in indices:
             
@@ -1204,7 +1214,7 @@ class Analysis():
     
                 base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
                 new_diag  = uncertainties_to_minimize[uncertainty_indices[row]:uncertainty_indices[row+1]]
-    
+                
                 for cov in temp_covs[row]:
                     if ~delayed_used & ((cov.reaction_1 == 456) | (cov.reaction_2 == 456) | (cov.reaction_1 == 455) | (cov.reaction_2 == 455)):
                         continue
@@ -1233,22 +1243,26 @@ class Analysis():
 
                     matrix     = cov.dataframe.to_numpy()
                     base_outer = np.outer(first_base, second_base)
-                    cor        = np.divide(matrix, base_outer, out=np.zeros_like(matrix), where= base_outer != 0 )
+                    cor        = np.divide(matrix, base_outer, out = np.zeros_like(matrix), where = base_outer != 0 )
                     new_outer  = np.outer(first_new, second_new)
                     new_cov_mat  = cor * new_outer   
                     sandwich = sens_1.sensitivity_vector @ new_cov_mat @ sens_2.sensitivity_vector
-                    sum +=  symm_coef * sandwich
+                    variance +=  symm_coef * sandwich
 
-            uncertainty = sum
-            print(f'Model {model_index} {functional}:', np.sqrt(uncertainty).real)
-            return uncertainty
+            print(f'Model {model_index} {functional}:', np.sqrt(variance).real)
+            return variance
 
+        ######################
+        # The third part
+        ######################
         # Non-linear constraints for trust-constr
         tar_constraints = []
         for s, sensitivities in enumerate(model_sensitivities):
             for functional in tars:
-                tar_constraint = scipy.optimize.NonlinearConstraint(lambda x, functional=functional, model_index=s, sensitivities=sensitivities: sandwich_constraint(x,functional,model_index,sensitivities) , 0, tars[functional]**2,
-                                                            jac = 'cs', hess = scipy.optimize.SR1())
+                tar_constraint = scipy.optimize.NonlinearConstraint(lambda x, functional=functional, model_index=s: sandwich_constraint(x, functional, model_index),
+                                                                    0, tars[functional]**2,
+                                                                    jac = 'cs', 
+                                                                    hess = scipy.optimize.SR1())
                 tar_constraints.append(tar_constraint)
 
         if method == 'trust-constr':
@@ -1263,15 +1277,18 @@ class Analysis():
                                           constraints = tar_constraints,
                                           options = {'disp': True,  'maxiter': maxiter},
                                           tol =  tol,
-                                          bounds = bounds)        
+                                          bounds = bounds)     
         else:
             raise NotImplementedError(f'The set method {method} is not implemented.')
 
-        optimized_uncertainties = [0 if unc == 0 else target for unc, target in zip(uncertainties, res.x)]
+        ######################
+        # The fourth part
+        ######################
+        optimized_uncertainties = np.where(uncertainties == 0, 0, res.x)
         print(optimized_uncertainties)
 
         # Completely copies the main covariances to avoid rewriting them
-        target_covariances = copy.deepcopy(covariances)
+        target_covariances = deepcopy(covariances)
         
         # Get covs with the zams of interest
         zam_covs = []
@@ -1283,11 +1300,11 @@ class Analysis():
             zam = zams[row]
             changed_covariances.append((zam,mt))
 
-            temp_covs = [cov for cov in zam_covs if ((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt))]
+            temp_covs_2 = [cov for cov in zam_covs if ((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt))]
             base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
             new_diag  = optimized_uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
             
-            for cov in temp_covs:
+            for cov in temp_covs_2:
                 if (cov.zam_1 == zam) & (cov.reaction_1 == mt):
                     first_new = new_diag
                     first_base = base_diag
@@ -1313,27 +1330,9 @@ class Analysis():
         cost = final_cost - base_cost
 
         print('The total number of symmmetric covariances tweaked:', len(zam_mt))
-        print('The tweaked covariances:', changed_covariances)
+        print('The tweaked symmetric covariances:', changed_covariances)
         print('The base cost function:', base_cost)
         print('The cost function:', final_cost)
         print('The net cost:', cost)
 
         return target_covariances
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
