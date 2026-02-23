@@ -956,7 +956,6 @@ class Analysis():
         
         # Prepare individual sensitivities and uncertainties to be used
         # for the optimization
-        zam_senses = []
         uncertainties = []
         zams = []
         reactions = []
@@ -1055,13 +1054,6 @@ class Analysis():
         energy_costs = energy_costs * int(len(uncertainties)/group_number)
         costs = np.multiply(costs,energy_costs)
 
-        for sensitivities in model_sensitivities:
-            temp_senses = []
-            for functional in tars:
-                for zam in set(zams):
-                    for reaction in all_reactions:
-                        temp_senses.append(sensitivities.get_by_params(functional, zam, reaction))
-            zam_senses.append(temp_senses)
 
         # Populate list of covs which are going to be tweaked
         zam_covs = [cov for cov in zam_covs if cov.reaction_1 in all_reactions]
@@ -1077,7 +1069,24 @@ class Analysis():
             mt  = reactions[row]
             zam = zams[row]
             temp_covs.append([cov for cov in zam_covs if (((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt)))])
+            
+        # Prepare sensitivity list which is going to be accessed during the
+        # optimization
+        temp_senses = []
+        for sensitivities in model_sensitivities:
+            model_senses = {}
+            for functional in tars:
+                for row in indices:
+                    mt  = reactions[row]
+                    zam = zams[row]
+                    for cov in temp_covs[row]:
+                        if (functional, cov.zam_1, cov.reaction_1) not in model_senses:
+                            model_senses[(functional, cov.zam_1, cov.reaction_1)] = sensitivities.get_by_params(functional, cov.zam_1, cov.reaction_1)
 
+                        if (functional, cov.zam_2, cov.reaction_2) not in model_senses:
+                            model_senses[(functional, cov.zam_2, cov.reaction_2)] = sensitivities.get_by_params(functional, cov.zam_2, cov.reaction_2)
+
+            temp_senses.append(model_senses)
         # Constraints for uncertainties: (unc_i)_min <= unc_i <= (unc_i)_0
         lower_boundaries = [unc if unc < lower_boundary else lower_boundary for unc in uncertainties]
         upper_boundaries = uncertainties.copy()
@@ -1116,23 +1125,23 @@ class Analysis():
                         continue
                     elif delayed_used & ((cov.reaction_1 == 452) | (cov.reaction_2 == 452)):
                         continue
+                    
                     symm_coef = 1
+
+                    sens_1 = temp_senses[model_index][(functional, cov.zam_1, cov.reaction_1)]
                     if (cov.zam_1 == zam) & (cov.reaction_1 == mt):
-                        sens_1 = next(sens for sens in zam_senses[model_index] if (sens.functional == functional) & (sens.zam == zam) & (sens.reaction == mt))
                         first_base = base_diag
                         first_new = new_diag
                     else:
-                        sens_1 = sensitivities.get_by_params(functional, cov.zam_1, cov.reaction_1)
                         first_base = 1
                         first_new = 1
                         symm_coef = 2
 
+                    sens_2 = temp_senses[model_index][(functional, cov.zam_2, cov.reaction_2)]
                     if (cov.zam_2 == zam) & (cov.reaction_2 == mt):
-                        sens_2 = next(sens for sens in zam_senses[model_index] if (sens.functional == functional) & (sens.zam == zam) & (sens.reaction == mt))
                         second_base = base_diag
                         second_new = new_diag        
                     else:
-                        sens_2 = sensitivities.get_by_params(functional, cov.zam_2, cov.reaction_2)
                         second_base = 1
                         second_new = 1
                         symm_coef = 2
