@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sandy
 import os
 import pandas as pd
@@ -5,6 +7,7 @@ import numpy as np
 import math
 import multiprocessing
 import pathlib 
+from numpy.typing import NDArray
 
 from .auxiliary import *
 
@@ -54,28 +57,28 @@ class Covariances():
 
     """
 
-    def __init__(self, library=''):
+    def __init__(self, library: str = '') -> None:
         self.library = library
         self._group_structure = []
         self._covariances = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.library!r}, {(len(self.group_structure)-1)!r})")
 
     @property
-    def library(self):
+    def library(self) -> str:
         return self._library
     
     @library.setter
-    def library(self, library):
+    def library(self, library: str) -> None:
         self._library = library
 
     @property
-    def group_structure(self):
+    def group_structure(self) -> NDArray[np.floating]:
         return self._group_structure
     
     @group_structure.setter
-    def group_structure(self, group_structure):
+    def group_structure(self, group_structure: list[float] | NDArray[np.floating]) -> None:
         group_number = len(group_structure)
         if group_number >=2 &  group_number <= 1501:
             self._group_structure = np.array(group_structure)
@@ -83,20 +86,20 @@ class Covariances():
             raise ValueError(f'The number of group must be between 1 and 1500, but {group_number-1} is provided')
 
     @property
-    def covariances(self):
+    def covariances(self) -> list[Covariance]:
         return self._covariances
     
     @covariances.setter
-    def covariances(self, covariances):
+    def covariances(self, covariances: list[Covariance]) -> None:
         self._covariances = covariances
 
-    def append(self, covariance):
+    def append(self, covariance: Covariance) -> None:
         self._covariances.append(covariance)
 
-    def extend(self, covariances):
+    def extend(self, covariances: list[Covariance]) -> None:
         self._covariances.extend(covariances)
 
-    def from_endf(self, file):
+    def from_endf(self, file: str) -> list[Covariance]:
         """Generate covariance matrices from an ENDF-6 file.
 
         Parameters
@@ -259,7 +262,7 @@ class Covariances():
 
         return covs_in_file
 
-    def from_endfs(self, folder, extension='.dat', parallel = True):
+    def from_endfs(self, folder: str, extension: str = '.dat', parallel: bool = True) -> None:
         """Generate covariance matrices from ENDF-6 files in a folder.
 
         Parameters
@@ -295,7 +298,7 @@ class Covariances():
         print(f'The {self.library} library has been processed.')
         print("-------------------------------")
 
-    def from_abbn(self, file):
+    def from_abbn(self, file: str) -> None:
         """Generate covariance matrices from an ABBN file.
         It assumes each file contains data about only one
         nuclide or element.
@@ -460,7 +463,7 @@ class Covariances():
                 covariance.mf = 33
             self.covariances.append(covariance) 
 
-    def from_abbns(self, folder, extension='.TAB'):
+    def from_abbns(self, folder: str, extension: str = '.TAB') -> None:
         """Import covariance matrices from ABBN files in a folder
         to the Covariances instances.
 
@@ -484,7 +487,7 @@ class Covariances():
         
         print('The covariances have been imported successfully.')
 
-    def from_excel(self, file):
+    def from_excel(self, file: str) -> None:
         """Import a covariance matrix from an .xlsx file 
         to the Covariances instance.
 
@@ -519,7 +522,7 @@ class Covariances():
 
         self.covariances.append(covariance) 
              
-    def from_excels(self, folder):
+    def from_excels(self, folder: str) -> None:
         """Import covariance matrices from .xlsx files in a folder
         to the Covariances instances.
 
@@ -541,7 +544,7 @@ class Covariances():
         
         print('The covariances have been imported successfully.')
 
-    def from_commara(self, file):
+    def from_commara(self, file: str) -> None:
         """Import covariance matrices from a COMMARA file to
         the Covariances instances.
 
@@ -748,7 +751,7 @@ class Covariances():
 
             self.covariances.append(covariance) 
 
-    def from_coverx(self, ampxcovconverter, file):
+    def from_coverx(self, ampxcovconverter: str, file: str) -> None:
         """Import covariance matrices from a COVERX (the format
         of AMPX of the SCALE code system) file to the
         Covariances instances.
@@ -779,7 +782,7 @@ class Covariances():
 
         lines = open(f'{file}.toc', "r").readlines()
 
-        def scaleid_to_zam(scale_id):
+        def scaleid_to_zam(scale_id: int) -> int:
             """Translate a SCALE ID to the corresponding
             ZAM value.
 
@@ -914,7 +917,7 @@ class Covariances():
         os.remove(f'{file}.new.toc')
         os.remove(f'{file}.toc')
 
-    def check_eigenvalues(self, eps=1e-5):
+    def check_eigenvalues(self, eps: float = 1e-5) -> None:
         """Check the mathermatical corectness of the 
         covariance matrices whether it is positive semidefinite.
         The method provides an output as a number of incorrect covariances
@@ -982,7 +985,7 @@ class Covariances():
         
         print('-------------------------------------------')
 
-    def check_corrs(self, eps = 1e-5):
+    def check_corrs(self, eps: float = 1e-5) -> None:
         """Check whether the correlation matrices are correct or
         not, i.e. the values are between -1 and 1. The method
         provides an output as a number of incorrect correlation
@@ -1018,7 +1021,7 @@ class Covariances():
         print(f'The number of incorrect correlation matrices is {number_of_corr} of {number_of_symmetric} symmetric matrices among a total number of {len(self.covariances)} matrices')
         print('-------------------------------------------')
 
-    def export_corrs(self, save_to='./correlations/', fix_corr = False, eps = 1e-5):
+    def export_corrs(self, save_to: str = './correlations/', fix_corr: bool = False, eps: float = 1e-5) -> None:
         """Auxiliary method to export the correlation matrices based upon
         the covariance matrices.
 
@@ -1053,7 +1056,7 @@ class Covariances():
         print('The correlations have been exported successfully.')
         print('-------------------------------------------------')
 
-    def limit_covs(self):
+    def limit_covs(self) -> None:
         """Limit variances and covariances to 100% to avoid
         unphysical or overestimated values. It assumes that there is
         no change in correlations while changing the variances
@@ -1098,7 +1101,7 @@ class Covariances():
         print(f'The number of matrices with over 100% values is {number_of_matrices} of a total number of {len(self.covariances)} matrices.')
         print('-------------------------------------------')
 
-    def get_by_zam(self, zam):
+    def get_by_zam(self, zam: int) -> NDArray:
         """Get a list of Covariance instances by a ZAM value
         from a Covariances instance.
 
@@ -1125,7 +1128,7 @@ class Covariances():
 
         return array
 
-    def get_by_reaction(self, mt):
+    def get_by_reaction(self, mt: int) -> NDArray:
         """Get a list of Covariance instances by a MT value
         from a Covariances instance.
 
@@ -1149,7 +1152,7 @@ class Covariances():
 
         return array
 
-    def get_by_params(self, zam_1, zam_2, reaction_1, reaction_2):
+    def get_by_params(self, zam_1: int, zam_2: int, reaction_1: int, reaction_2: int) -> Covariance:
         """Get a Covariance instance by the ZAM, Reaction 1 MT
         number, and Reaction 2 MT numbers from a Covariances instance.
 
@@ -1172,7 +1175,7 @@ class Covariances():
         
         return next(cov for cov in self.covariances if (cov.zam_1 == zam_1) & (cov.zam_2 == zam_2) & (cov.reaction_1 == reaction_1) & (cov.reaction_2 == reaction_2))
 
-    def to_excels(self, save_to='./covariances/', fix_corr = False, eps = 1e-5):
+    def to_excels(self, save_to: str = './covariances/', fix_corr: bool = False, eps: float = 1e-5) -> None:
         """Export covariances in the Coviariances instance
         to Excel files.
 
@@ -1241,88 +1244,88 @@ class Covariance():
     
     """
 
-    def __init__(self):
-        self._library = None
-        self._mat = None
-        self._zam_1 = None
-        self._zam_2 = None
-        self._file = None
-        self._reaction_1 = None
-        self._reaction_2 = None
-        self._group_structure = None
-        self._dataframe = None
+    def __init__(self) -> None:
+        self._library: str | None = None
+        self._mat: int | None = None
+        self._zam_1: int | None = None
+        self._zam_2: int | None = None
+        self._file: str | None = None
+        self._reaction_1: int | None = None
+        self._reaction_2: int | None = None
+        self._group_structure: NDArray[np.floating] | None = None
+        self._dataframe: pd.DataFrame | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.zam_1!r}-{self.zam_2!r}, {self.reaction_1!r}-{self.reaction_2!r}, {(len(self.group_structure)-1)!r})")
 
     @property
-    def library(self):
+    def library(self) -> str | None:
         return self._library
     
     @library.setter
-    def library(self, library):
+    def library(self, library: str) -> None:
         self._library = library
 
     @property
-    def mat(self):
+    def mat(self) -> int | None:
         return self._mat
     
     @mat.setter
-    def mat(self, mat):
+    def mat(self, mat: int) -> None:
         self._mat = mat
 
     @property
-    def zam_1(self):
+    def zam_1(self) -> int | None:
         return self._zam_1
 
     @property
-    def zam_2(self):
+    def zam_2(self) -> int | None:
         return self._zam_2
 
     @zam_1.setter
-    def zam_1(self, zam_1):
+    def zam_1(self, zam_1: int) -> None:
         self._zam_1 = zam_1
 
     @zam_2.setter
-    def zam_2(self, zam_2):
+    def zam_2(self, zam_2: int) -> None:
         self._zam_2 = zam_2
 
     @property
-    def mf(self):
+    def mf(self) -> int | None:
         return self._mf
     
     @mf.setter
-    def mf(self, mf):
+    def mf(self, mf: int) -> None:
         self._mf = mf
 
     @property
-    def reaction_1(self):
+    def reaction_1(self) -> int | None:
         return self._reaction_1
     
     @reaction_1.setter
-    def reaction_1(self, reaction_1):
+    def reaction_1(self, reaction_1: int) -> None:
         self._reaction_1 = reaction_1
     
     @property
-    def reaction_2(self):
+    def reaction_2(self) -> int | None:
         return self._reaction_2
     
     @reaction_2.setter
-    def reaction_2(self, reaction_2):
+    def reaction_2(self, reaction_2: int) -> None:
         self._reaction_2 = reaction_2
     
     @property
-    def group_structure(self):
+    def group_structure(self) -> NDArray[np.floating] | None:
         return self._group_structure
     
     @group_structure.setter
-    def group_structure(self, group_structure):
+    def group_structure(self, group_structure: list[float] | NDArray[np.floating]) -> None:
         self._group_structure = group_structure
 
     @property
-    def dataframe(self):
+    def dataframe(self) -> pd.DataFrame | None:
         return self._dataframe
     
     @dataframe.setter
-    def dataframe(self, dataframe):
-        self._dataframe = dataframe    
+    def dataframe(self, dataframe: pd.DataFrame) -> None:
+        self._dataframe = dataframe

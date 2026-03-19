@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import pathlib
 import numpy as np
+from numpy.typing import NDArray
 
-def get_text(file):
+
+def get_text(file: str) -> str:
     """Extract the text from an ENDF-6 file and fix it
 
     Parameters
     ----------
     file : str
-        The relative path to an ENDF-6 file to processn, e.g.,
+        The relative path to an ENDF-6 file to process, e.g.,
         '../NuclearData/BROND-3.1/n_5040_50-Sn-117.dat'
     
     Returns
@@ -27,7 +31,8 @@ def get_text(file):
 
     return text
 
-def fix_endf(text):
+
+def fix_endf(text: str) -> str:
     """Fix ENDF-6 files to allow pandas to parse them correctly.
     This does not interact with the original ENDF-6 files. They
     are fixed internally.
@@ -56,7 +61,8 @@ def fix_endf(text):
     
     return text
 
-def get_zam(tape):
+
+def get_zam(tape: "sandy.Endf6") -> int:  # type: ignore[name-defined]
     """Get ZAM (ZA * 10 + META) of a nuclide from tape
      
     Parameters
@@ -66,40 +72,43 @@ def get_zam(tape):
 
     Returns
     -------
-    str
+    int
         ZAM of the nuclide
 
     Notes
     -----
-    This method can is used to properly name files
+    This method is used to properly name files
 
     """
-    # Get material the MAT number
-    mat = tape.mat[0]
+    # Get the MAT number
+    mat: int = tape.mat[0]
 
     # Get data from the tape
-    info = tape.read_section(mat, 1, 451)
-    meta = info["LISO"]
-    za = int(info["ZA"])
-    zam = za * 10 + meta
+    info: dict = tape.read_section(mat, 1, 451)
+    meta: int = info["LISO"]
+    za: int = int(info["ZA"])
+    zam: int = za * 10 + meta
 
     return zam
 
-def process_file(tape, library, group_structure):
-    """Get ZAM (ZA * 10 + META) of a nuclide from tape
+
+def process_file(
+    tape: "sandy.Endf6",  # type: ignore[name-defined]
+    library: str,
+    group_structure: list[float],
+) -> "sandy.endf.errorr":  # type: ignore[name-defined]
+    """Process an ENDF-6 tape through NJOY/ERRORR for a given library and group structure.
      
     Parameters
     ----------
     tape: sandy.Endf6
         An ENDF-6 tape to process
-    
-    library : str, optional
+    library : str
         The argument defines how the method interacts with peculiarities of
         different libraries. The special exceptions are provided for
         'ENDF/B-VIII.0', 'JEFF-4T2.2', 'JEFF-4T3', and 'BROND-3.1'. There are
         no exceptions for other state-of-the-art libraries. 
-    
-    group_structur : list, optional
+    group_structure : list of float
         Group structure to process an ENDF-6 file in eV
 
     Returns
@@ -113,7 +122,7 @@ def process_file(tape, library, group_structure):
 
     """   
 
-    zam = get_zam(tape)
+    zam: int = get_zam(tape)
     # These conditions are specified otherwise NJOY does not allow processing the following files
     if library == 'ENDF/B-VIII.0':
         if zam in [922380, 922350]:                               
@@ -178,9 +187,9 @@ def process_file(tape, library, group_structure):
 
     return errorr
 
-def cov_to_corr(array_of_covariances):
-    """Generate a correlation matrix from a symmetric 
-    covariance matrix
+
+def cov_to_corr(array_of_covariances: NDArray[np.floating]) -> NDArray[np.floating]:
+    """Generate a correlation matrix from a symmetric covariance matrix.
 
     Parameters
     ----------
@@ -190,55 +199,71 @@ def cov_to_corr(array_of_covariances):
     Return
     ------
     numpy.ndarray
-        Correlation matrix from a covariance matrix
+        Correlation matrix derived from the covariance matrix
 
     """
-    diag = np.sqrt(np.diag(array_of_covariances))
-    outer = np.outer(diag, diag)
-    correlations = np.divide(array_of_covariances, outer, out=np.zeros_like(array_of_covariances), where=outer != 0)
+    diag: NDArray[np.floating] = np.sqrt(np.diag(array_of_covariances))
+    outer: NDArray[np.floating] = np.outer(diag, diag)
+    correlations: NDArray[np.floating] = np.divide(
+        array_of_covariances, outer,
+        out=np.zeros_like(array_of_covariances),
+        where=outer != 0,
+    )
     return correlations
 
-def corr_to_cov(array_of_correlations, variances):
-    """Generate a covariance matrix from a symmetric 
-    correlation matrix
+
+def corr_to_cov(
+    array_of_correlations: NDArray[np.floating],
+    variances: NDArray[np.floating],
+) -> NDArray[np.floating]:
+    """Generate a covariance matrix from a symmetric correlation matrix.
 
     Parameters
     ----------
     array_of_correlations : numpy.ndarray
         Correlation matrix
-
     variances : numpy.ndarray
         Variances for the corresponding correlations
 
     Return
     ------
     numpy.ndarray
-        Covariance matrix from a correlation matrix
+        Covariance matrix derived from the correlation matrix
 
     """
-    diag = np.sqrt(variances)
-    outer_diag = np.outer(diag, diag)
-    covariances = array_of_correlations * outer_diag
+    diag: NDArray[np.floating] = np.sqrt(variances)
+    outer_diag: NDArray[np.floating] = np.outer(diag, diag)
+    covariances: NDArray[np.floating] = array_of_correlations * outer_diag
     return covariances
 
-def fix_corrs(cov, eps=1e-5):
+
+def fix_corrs(cov: "Covariance", eps: float = 1e-5) -> NDArray[np.floating]:  # type: ignore[name-defined]
     """Make sure that a symmetric covariance matrix does
-    not have non-mathematical correlations
+    not have non-mathematical correlations.
 
     Parameters
     ----------
+    cov : Covariance
+        A symmetric Covariance instance (reaction_1 must equal reaction_2)
+    eps : float, optional
+        Tolerance for clipping correlations outside [-1, 1]. Default is 1e-5.
 
     Returns
     -------
     numpy.ndarray
-        Returns fixed symmetric covariance matrix
+        Fixed symmetric covariance matrix as a numpy array
+
+    Raises
+    ------
+    ValueError
+        If a non-symmetric (cross-reaction) covariance is provided.
     
     """      
 
     if cov.reaction_1 == cov.reaction_2:
-        array_of_covs = cov.dataframe.to_numpy()
+        array_of_covs: NDArray[np.floating] = cov.dataframe.to_numpy()
 
-        corr = cov_to_corr(array_of_covs)
+        corr: NDArray[np.floating] = cov_to_corr(array_of_covs)
 
         corr = np.where(corr > 1+eps, 1, corr)                 
         corr = np.where(corr < -1-eps, -1, corr)
@@ -248,13 +273,41 @@ def fix_corrs(cov, eps=1e-5):
         return cov
     else:
         raise ValueError(f'Non-symmetric matrix is provided.')
-    
-def get_negative(list):
+
+
+def get_negative(list: list[float]) -> int | None:
+    """Return the index of the first negative value in a list.
+
+    Parameters
+    ----------
+    list : list of float
+        Input list to search for a negative value
+
+    Returns
+    -------
+    int or None
+        Index of the first negative element, or None if none found
+
+    """
     for i in range(len(list)):
         if list[i] < 0:
             return i
 
-def get_complex(list):
+
+def get_complex(list: list[complex]) -> int | None:
+    """Return the index of the first complex value in a list.
+
+    Parameters
+    ----------
+    list : list of complex
+        Input list to search for a complex value
+
+    Returns
+    -------
+    int or None
+        Index of the first complex element, or None if none found
+
+    """
     for i in range(len(list)):
         if np.iscomplex(list[i]):
             return i
