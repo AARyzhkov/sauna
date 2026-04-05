@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Sequence
 
 import sandy
 import os
@@ -7,7 +8,6 @@ import numpy as np
 import math
 import multiprocessing
 import pathlib 
-from numpy.typing import NDArray
 
 from .auxiliary import *
 
@@ -50,7 +50,7 @@ class Covariances():
     group_structure : numpy.ndarray
         Group structure used in the elements (Covariance instances) of 
         Covariances to process the data to.
-    covariances : list
+    covariances : list of Covariance instance
         List of the Covariance instances.
     zams : numpy.ndarray
         List of zams present in the Covariances instance.
@@ -59,8 +59,8 @@ class Covariances():
 
     def __init__(self, library: str = '') -> None:
         self.library = library
-        self._group_structure = []
-        self._covariances = []
+        self._group_structure : Sequence[float] = []
+        self._covariances : Sequence[Covariance] = []
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.library!r}, {(len(self.group_structure)-1)!r})")
@@ -74,11 +74,11 @@ class Covariances():
         self._library = library
 
     @property
-    def group_structure(self) -> NDArray[np.floating]:
+    def group_structure(self) -> np.ndarray:
         return self._group_structure
     
     @group_structure.setter
-    def group_structure(self, group_structure: list[float] | NDArray[np.floating]) -> None:
+    def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
         if group_number >=2 &  group_number <= 1501:
             self._group_structure = np.array(group_structure)
@@ -472,6 +472,9 @@ class Covariances():
         folder : str
             Relative path to a folder with the abbn covariance files, e.g.,
             '../NuclearData/ABBN_COV'.
+        extenstion : str
+            Extension of the files in the folder argument. The default value
+            is '.TAB'.
 
         """
         
@@ -923,6 +926,13 @@ class Covariances():
         The method provides an output as a number of incorrect covariances
         and the data itself.
 
+        Parameters
+        ----------
+        eps : float, optional
+            Allowed deviation from -1 and 1 to be ignored during
+            a checking. That is, the matrices are assumed incorrect
+            if at least one element has a value of <-1-eps or >1+eps .
+
         """          
 
         number_of_positive = 0
@@ -1027,8 +1037,14 @@ class Covariances():
 
         Parameters
         ----------
-        save_to: str
+        save_to : str, optional
             Relative path to save the processed correlations, e.g., './BROND-3.1'.
+        fix_corr : bool, optional
+            Choose whether to export them fixed or not.
+        eps : float, optional
+            Allowed deviation from -1 and 1 to be ignored during
+            a checking. That is, the matrices are assumed incorrect
+            if at least one element has a value of <-1-eps or >1+eps.
 
         """  
 
@@ -1101,7 +1117,7 @@ class Covariances():
         print(f'The number of matrices with over 100% values is {number_of_matrices} of a total number of {len(self.covariances)} matrices.')
         print('-------------------------------------------')
 
-    def get_by_zam(self, zam: int) -> NDArray:
+    def get_by_zam(self, zam: int) -> np.array:
         """Get a list of Covariance instances by a ZAM value
         from a Covariances instance.
 
@@ -1128,7 +1144,7 @@ class Covariances():
 
         return array
 
-    def get_by_reaction(self, mt: int) -> NDArray:
+    def get_by_reaction(self, mt: int) -> np.array:
         """Get a list of Covariance instances by a MT value
         from a Covariances instance.
 
@@ -1181,14 +1197,18 @@ class Covariances():
 
         Parameters
         ----------
-        save_to: str, optional
+        save_to : str, optional
             Relative path to save the processed covariances, e.g., './BROND-3.1'.
-        fix_corr: bool, optional
+        fix_corr : bool, optional
             Fix those matrices which correlations are mathematically incorrect.
             It sets the values over 1+err to 1 and the values less than -1-err
-            to zero. err is asuumed equal to 1e-5 since the values in ENDF-6 files
+            to zero.
+        eps : float, optional 
+            Allowed deviation from -1 and 1 to be ignored during
+            a checking. That is, the matrices are assumed incorrect
+            if at least one element has a value of <-1-eps or >1+eps.
+            The default is asuumed equal to 1e-5 since the values in ENDF-6 files
             are limited to 1e-6.
-
         """  
 
         # Create the directory if it does not exist
@@ -1245,15 +1265,15 @@ class Covariance():
     """
 
     def __init__(self) -> None:
-        self._library: str | None = None
-        self._mat: int | None = None
-        self._zam_1: int | None = None
-        self._zam_2: int | None = None
-        self._file: str | None = None
-        self._reaction_1: int | None = None
-        self._reaction_2: int | None = None
-        self._group_structure: NDArray[np.floating] | None = None
-        self._dataframe: pd.DataFrame | None = None
+        self._library: Optional[str] = None
+        self._mat: Optional[int] = None
+        self._zam_1: Optional[int] = None
+        self._zam_2: Optional[int] = None
+        self._file: Optional[str] = None
+        self._reaction_1: Optional[int] = None
+        self._reaction_2: Optional[int] = None
+        self._group_structure: Sequence[float] = None
+        self._dataframe: Optional[pd.DataFrame] = None
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.zam_1!r}-{self.zam_2!r}, {self.reaction_1!r}-{self.reaction_2!r}, {(len(self.group_structure)-1)!r})")
@@ -1315,12 +1335,12 @@ class Covariance():
         self._reaction_2 = reaction_2
     
     @property
-    def group_structure(self) -> NDArray[np.floating] | None:
+    def group_structure(self) -> np.ndarray | None:
         return self._group_structure
     
     @group_structure.setter
-    def group_structure(self, group_structure: list[float] | NDArray[np.floating]) -> None:
-        self._group_structure = group_structure
+    def group_structure(self, group_structure: Sequence[float]) -> None:
+        self._group_structure = np.array(group_structure)
 
     @property
     def dataframe(self) -> pd.DataFrame | None:

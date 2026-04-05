@@ -1,12 +1,11 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, Sequence
 
 import numpy as np
 import pandas as pd
 import os
 import scipy.optimize
 from copy import deepcopy
-from numpy.typing import NDArray
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .sensitivity import Sensitivity, Sensitivities
@@ -75,26 +74,26 @@ class Analysis():
     @classmethod
     def get_std(
         cls,
-        vec_1: NDArray[np.floating],
-        std_1: NDArray[np.floating],
-        cov_matrix: NDArray[np.floating],
-        vec_2: NDArray[np.floating],
-        std_2: NDArray[np.floating],
+        vec_1: Sequence[float],
+        std_1: Sequence[float],
+        cov_matrix: Sequence[float],
+        vec_2: Sequence[float],
+        std_2: Sequence[float]
     ) -> float:
         """Calculate statistical uncertainty of uncertainty based upon the
         sensitivities and their statistical uncertainty.
 
         Parameters
         ----------
-        vec_1: numpy.ndarray
+        vec_1: Sequence[float]
             The first sensitivity vector
-        std_1: numpy.ndarray
+        std_1: Sequence[float]
             Statistical uncertainty of the first sensitivity vector
-        cov_matrix: numpy.ndarray
+        cov_matrix: Sequence[float]
             Covariance matrix 
-        vec_2: numpy.ndarray
+        vec_2: Sequence[float]
             The second sensitivity vector
-        std_2: numpy.ndarray
+        std_2: Sequence[float]
             Statistical uncertainty of the second sensitivity vector
 
         Returns
@@ -122,7 +121,7 @@ class Analysis():
         std_1: float,
         covariance: float,
         sensitivity_2: float,
-        std_2: float,
+        std_2: float
     ) -> float:
         """Calculate statistical uncertainty of uncertainty based upon the
         sensitivities and their statistical uncertainty.
@@ -162,9 +161,9 @@ class Analysis():
     @classmethod
     def sandwich(
         cls,
-        sensitivity_1: "Sensitivity",
-        covariance: "Covariance",
-        sensitivity_2: "Sensitivity",
+        sensitivity_1: Sensitivity,
+        covariance: Covariance,
+        sensitivity_2: Sensitivity
     ) -> tuple[float, float]:
         """Propagate a functional uncertainty via the Sandwich rule.
          
@@ -185,22 +184,22 @@ class Analysis():
         """
 
         # Get sensitivity vectors and its uncertainties 
-        vec_1: NDArray[np.floating] = sensitivity_1.sensitivity_vector
-        std_1: NDArray[np.floating] = sensitivity_1.uncertainty_vector
-        vec_2: NDArray[np.floating] = sensitivity_2.sensitivity_vector
-        std_2: NDArray[np.floating] = sensitivity_2.uncertainty_vector
+        vec_1 = sensitivity_1.sensitivity_vector
+        std_1 = sensitivity_1.uncertainty_vector
+        vec_2 = sensitivity_2.sensitivity_vector
+        std_2 = sensitivity_2.uncertainty_vector
 
-        cov_matrix: NDArray[np.floating] = covariance.dataframe.to_numpy()
+        cov_matrix = covariance.dataframe.to_numpy()
 
-        covariance_val: float = vec_1 @ cov_matrix @ vec_2
+        cov_val = vec_1 @ cov_matrix @ vec_2
 
-        if covariance_val != 0: 
-            std: float = cls.get_std(vec_1, std_1, cov_matrix, vec_2, std_2)
+        if cov_val != 0: 
+            std = cls.get_std(vec_1, std_1, cov_matrix, vec_2, std_2)
         else:
             std = 0
 
         # Artificially set std no more than uncertainty
-        uncertainty: float = cls.cov_to_unc(covariance_val)
+        uncertainty = cls.cov_to_unc(cov_val)
         if std > abs(uncertainty):
             std = abs(uncertainty)
 
@@ -209,14 +208,14 @@ class Analysis():
     @classmethod
     def compare(
         cls,
-        sensitivities_1: "Sensitivities",
-        sensitivities_2: "Sensitivities",
+        sensitivities_1: Sensitivities,
+        sensitivities_2: Sensitivities,
         functional_1: str = 'Eigenvalue',
         functional_2: str = 'Eigenvalue',
         type: str = 'E',
-        covariances: "Covariances | None" = None,
-        reactions: list[int] | None = None,
-        save_to: str | None = None,
+        covariances: Optional[Covariances] = None,
+        reactions: Optional[Sequence[int]] = None,
+        save_to: Optional[str] = None
     ) -> float:
         """Calculate similarity indices.
         
@@ -238,7 +237,7 @@ class Analysis():
             Covariances instance to use for similarity assessment;
             it must be specified if only the c_k type of similarity
             is calculated, otherwise it is not used.
-        reactions: list of int, optional
+        reactions: Sequence[int], optional
             List of MT numbers to take into account for similarity assessment.
             None is default and accounts for all the reactions. This argument
             dictates to take only certain MT numbers. It is currently
@@ -263,9 +262,9 @@ class Analysis():
 
         if type == "E":
 
-            numerator: float = 0
-            denominator_a: float = 0
-            denominator_e: float = 0
+            numerator = 0.
+            denominator_a = 0.
+            denominator_e = 0.
 
             for sensitivity_a in sensitivities_1.get_by_functional(functional_1):
                 sensitivity_e = sensitivities_2.get_by_params(functional_2, sensitivity_a.zam, sensitivity_a.reaction)
@@ -277,13 +276,13 @@ class Analysis():
             return np.sum(numerator) / np.sqrt(np.sum(denominator_a) * np.sum(denominator_e))   
         
         elif type == "G":   
-            numerator = 0
-            denominator: float = 0
+            numerator = 0.
+            denominator = 0.
             if reactions == None:
                 for sensitivity_1 in sensitivities_1.get_by_functional(functional_1):           
                 
-                    vec_a: NDArray[np.floating] = sensitivity_1.sensitivity_vector
-                    vec_e: NDArray[np.floating] = sensitivities_2.get_by_params(functional_2, sensitivity_1.zam, sensitivity_1.reaction).sensitivity_vector
+                    vec_a = sensitivity_1.sensitivity_vector
+                    vec_e = sensitivities_2.get_by_params(functional_2, sensitivity_1.zam, sensitivity_1.reaction).sensitivity_vector
                     
                     for g in range(len(vec_a)):
 
@@ -309,7 +308,7 @@ class Analysis():
                         elif (np.abs(vec_a[g]) >= np.abs(vec_e[g])):
                             numerator += np.abs(vec_a[g] - vec_e[g])                    
                     
-            index: float = 1 - numerator/denominator 
+            index = 1. - numerator/denominator 
         
             return index 
         elif type == "c_k":
@@ -323,15 +322,15 @@ class Analysis():
             
             # Get the list of all zams contained in both the application and 
             # experimental Sensitivities instances
-            zams: list[int] = sensitivities_1.zams + list(set(sensitivities_2.zams) - set(sensitivities_1.zams))
+            zams = sensitivities_1.zams + list(set(sensitivities_2.zams) - set(sensitivities_1.zams))
             for zam in zams:
                 covs = covariances.get_by_zam(zam)
 
                 for cov in covs:
-                    zam_1: int = cov.zam_1
-                    zam_2: int = cov.zam_2
-                    first_mt: int  = cov.reaction_1
-                    second_mt: int = cov.reaction_2
+                    zam_1 = cov.zam_1
+                    zam_2 = cov.zam_2
+                    first_mt  = cov.reaction_1
+                    second_mt = cov.reaction_2
 
                     if (first_mt != 1) & (second_mt != 1) & (first_mt != 455) & (first_mt != 456) & (second_mt != 455) & (second_mt != 456):
                         sensitivity_a1 = sensitivities_1.get_by_params(functional_1, zam_1, first_mt)
@@ -344,7 +343,7 @@ class Analysis():
                         cov_ae = cls.unc_to_cov(uncertainty_ae)
                         
                         numerator += cov_ae
-                        individual_contribution: float = cov_ae
+                        individual_contribution = cov_ae
 
                         uncertainty_a, _  = cls.sandwich(sensitivity_a1, cov, sensitivity_a2)
                         cov_a = cls.unc_to_cov(uncertainty_a)
@@ -363,11 +362,11 @@ class Analysis():
                            denominator_e += cov_e
                         
                         # Create a new row to append it to the dataframe
-                        new_row: dict = {'Nuclide 1'      : f'{sensitivity_a1.zam}',
-                                         'Reaction 1'     : f'MT{sensitivity_a1.reaction}',
-                                         'Nuclide 2'      : f'{sensitivity_a2.zam}',
-                                         'Reaction 2'     : f'MT{sensitivity_a2.reaction}',
-                                         'Individual c_k' : individual_contribution}   
+                        new_row = {'Nuclide 1'      : f'{sensitivity_a1.zam}',
+                                   'Reaction 1'     : f'MT{sensitivity_a1.reaction}',
+                                   'Nuclide 2'      : f'{sensitivity_a2.zam}',
+                                   'Reaction 2'     : f'MT{sensitivity_a2.reaction}',
+                                   'Individual c_k' : individual_contribution}   
                         
                         c_k_df.loc[len(c_k_df)] = new_row
 
@@ -375,9 +374,9 @@ class Analysis():
             index = numerator/denominator
 
             # Add the total uncertainty row 
-            total_c_k: float = np.sum(c_k_df['Individual c_k'])
+            total_c_k = np.sum(c_k_df['Individual c_k'])
 
-            total_row: dict = {'Nuclide 1'      : 'total',
+            total_row = {'Nuclide 1'      : 'total',
                          'Reaction 1'     : 'total',
                          'Nuclide 2'      : 'total',
                          'Reaction 2'     : 'total',
@@ -419,10 +418,10 @@ class Analysis():
     @classmethod
     def get_breakdown(
         cls,
-        sensitivities: "Sensitivities",
-        covariances: "Covariances",
-        save_to: str | None = None,
-        by_total: bool = False,
+        sensitivities: Sensitivities,
+        covariances: Covariances,
+        save_to: Optional[str] = None,
+        by_total: bool = False
     ) -> dict[str, pd.DataFrame]:
         """Propagate the uncertainties of the functionals in the Sensitivities
         instance via the Sandwich rule and produce the dataframes with the
@@ -471,10 +470,10 @@ class Analysis():
 
                 # Get sensitivities for each cov and propagate the uncertainties
                 for cov in covs:
-                    zam_1: int = cov.zam_1
-                    zam_2: int = cov.zam_2
-                    first_mt: int  = cov.reaction_1
-                    second_mt: int = cov.reaction_2
+                    zam_1 = cov.zam_1
+                    zam_2 = cov.zam_2
+                    first_mt  = cov.reaction_1
+                    second_mt = cov.reaction_2
                     if (first_mt != 1) & (second_mt != 1) & (by_total == False):
                         if (first_mt != 455) & (first_mt != 456) & (second_mt != 455) & (second_mt != 456):
 
@@ -543,10 +542,10 @@ class Analysis():
                         uncertainty_df.loc[len(uncertainty_df)] = new_row
 
             # Add the total uncertainty row 
-            total_uncertainty: float = np.sqrt(np.sum(i*i if i >=0 else -i*i for i in uncertainty_df['Uncertainty [%]']))
-            stat_uncertainty: float  = np.sqrt(np.sum(uncertainty_df['Statistical Uncertainty [%]'][i]**2 * uncertainty_df['Uncertainty [%]'][i]**2 / total_uncertainty**2 for i in range(len(uncertainty_df['Statistical Uncertainty [%]']))))
+            total_uncertainty = np.sqrt(np.sum(i*i if i >=0 else -i*i for i in uncertainty_df['Uncertainty [%]']))
+            stat_uncertainty  = np.sqrt(np.sum(uncertainty_df['Statistical Uncertainty [%]'][i]**2 * uncertainty_df['Uncertainty [%]'][i]**2 / total_uncertainty**2 for i in range(len(uncertainty_df['Statistical Uncertainty [%]']))))
 
-            total_row: dict = {'Nuclide 1'   : 'total',
+            total_row = {'Nuclide 1'   : 'total',
                          'Reaction 1'  : 'total',
                          'Nuclide 2'   : 'total',
                          'Reaction 2'  : 'total',
@@ -573,10 +572,10 @@ class Analysis():
     @classmethod
     def get_detailed(
         cls,
-        sensitivities: "Sensitivities",
-        covariances: "Covariances",
-        save_to: str | None = None,
-        by_total: bool = False,
+        sensitivities: Sensitivities,
+        covariances: Covariances,
+        save_to: Optional[str] = None,
+        by_total: bool = False
     ) -> dict[str, pd.DataFrame]:
         """Get detailed (groupwise) uncertainty breakdown. 
          
@@ -608,10 +607,10 @@ class Analysis():
         """
         
         # Create a dictionary of dataframes for different functionals
-        dataframes: dict[str, pd.DataFrame] = {}
-        group_number: int = len(sensitivities.group_structure) - 1
-        indices: NDArray[np.intp] = np.arange(group_number)
-        sqrt_two: float = np.sqrt(2)
+        dataframes = {}
+        group_number = len(sensitivities.group_structure) - 1
+        indices = np.arange(group_number)
+        sqrt_two = np.sqrt(2)
 
         def get_rows(
             functional: str,
@@ -644,18 +643,18 @@ class Analysis():
             # Get Sensitivity instances for the corresponding covariance matrix
             sensitivity_1 = sensitivities.get_by_params(functional, zam_1, first_mt)
             sensitivity_2 = sensitivities.get_by_params(functional, zam_2, second_mt)
-            is_mts_equal: bool = (first_mt == second_mt)
-            vec_1: NDArray[np.floating] = sensitivity_1.sensitivity_vector
-            vec_2: NDArray[np.floating] = sensitivity_2.sensitivity_vector
-            std_1: NDArray[np.floating] = sensitivity_1.uncertainty_vector
-            std_2: NDArray[np.floating] = sensitivity_2.uncertainty_vector
-            cov_matrix: NDArray[np.floating] = cov.dataframe.to_numpy()
+            is_mts_equal = (first_mt == second_mt)
+            vec_1 = sensitivity_1.sensitivity_vector
+            vec_2 = sensitivity_2.sensitivity_vector
+            std_1 = sensitivity_1.uncertainty_vector
+            std_2 = sensitivity_2.uncertainty_vector
+            cov_matrix = cov.dataframe.to_numpy()
 
-            temp_rows: list[dict] = []
+            temp_rows = []
             for i in indices:
                 for j in indices:
-                    uncertainty: float = cls.cov_to_unc(vec_1[i] * cov_matrix[i][j] * vec_2[j])
-                    std: float = cls.get_individual_std(vec_1[i], std_1[i], cov_matrix[i][j], vec_2[j], std_2[j])
+                    uncertainty = cls.cov_to_unc(vec_1[i] * cov_matrix[i][j] * vec_2[j])
+                    std = cls.get_individual_std(vec_1[i], std_1[i], cov_matrix[i][j], vec_2[j], std_2[j])
 
                     # Artificially set std not more than uncertainty
                     if std > abs(uncertainty):
@@ -666,14 +665,14 @@ class Analysis():
                          uncertainty, std = uncertainty * sqrt_two, std * sqrt_two
 
                     # Create a new row to append it to the dataframe
-                    new_row: dict = {'Nuclide 1'      : f'{zam_1}',
-                                 'Reaction 1'     : f'MT{first_mt}',
-                                 'Group 1'        : group_number - i,
-                                 'Nuclide 2'      : f'{zam_2}',
-                                 'Reaction 2'     : f'MT{second_mt}',
-                                 'Group 2'        : group_number - j,
-                                 'Uncertainty [%]': uncertainty * 100,
-                                 'Statistical Uncertainty [%]' : std * 100}
+                    new_row = {'Nuclide 1'      : f'{zam_1}',
+                               'Reaction 1'     : f'MT{first_mt}',
+                               'Group 1'        : group_number - i,
+                               'Nuclide 2'      : f'{zam_2}',
+                               'Reaction 2'     : f'MT{second_mt}',
+                               'Group 2'        : group_number - j,
+                               'Uncertainty [%]': uncertainty * 100,
+                               'Statistical Uncertainty [%]' : std * 100}
                     temp_rows.append(new_row)
             return  temp_rows
 
@@ -681,7 +680,7 @@ class Analysis():
         # Get necessary functionals from sensitivities
         if by_total == False:
             for functional in sensitivities.functionals:
-                rows: list[dict] = []
+                rows = []
                 if ('beta-eff' == functional) | ('lambda-eff' == functional):
                     for zam in sensitivities.zams:
                         covs = covariances.get_by_zam(zam)
@@ -692,7 +691,7 @@ class Analysis():
                             second_mt = cov.reaction_2
 
                             if (first_mt != 1) & (second_mt != 1):
-                                is_nu_t: bool = (first_mt != 455) & (first_mt != 456) & (second_mt != 455) & (second_mt != 456)
+                                is_nu_t = (first_mt != 455) & (first_mt != 456) & (second_mt != 455) & (second_mt != 456)
                                 if is_nu_t: 
                                     rows.extend(get_rows(functional, zam_1, zam_2, first_mt, second_mt)) 
                                 elif (first_mt == 455 | second_mt == 455) & (first_mt != 456 | second_mt != 456): 
@@ -789,13 +788,13 @@ class Analysis():
     @classmethod
     def get_concentration_uncertainty(
         cls,
-        sensitivities: "Sensitivities",
+        sensitivities: Sensitivities,
         uncertainty: float,
-        targets: NDArray[np.intp],
-        background_zams: list[int],
+        targets: Sequence[int],
+        background_zams: Sequence[int],
         fraction: float,
         fraction_type: str = 'ao',
-        uncertainty_type: str = 'normal',
+        uncertainty_type: str = 'normal'
     ) -> dict[str, float]:
         """Propagate the uncertainties of the functionals in the Sensitivities
         instance based upon the idea that macroscopic XS are strictly defined
@@ -811,10 +810,10 @@ class Analysis():
             Uncertainty in the concentration: 68% of the confidence interval
             for the 'normal' distribution or 1/2 of the range of the 
             'uniform' and 'triangular' distributions.
-        targets: numpy.ndarray of int
+        targets: iterable of int
             ZAM values for the nuclide whose uncertainty
             is provided in the uncertainty parameter.
-        background_zams: list of int
+        background_zams: iterable of int
             Nuclides to be considered in the calculation, excluding the target nuclide. 
             Make sure that correct nuclides (ZAMs) for the region, where the influence
             of uncertainties in concentrations is assessed. For example, ZAMs
@@ -849,7 +848,7 @@ class Analysis():
                 nuclides.remove(target)
                 print(f'{target} has been removed from the background_zams array.')
 
-        concentration_uncertainties: dict[str, float] = {}
+        concentration_uncertainties = {}
 
         for functional in sensitivities.functionals:
             
@@ -863,8 +862,8 @@ class Analysis():
 
             # Get constrained sensitivities:
             if fraction_type == 'ao':
-                constrained_sensitivity: float = unconstrained_sensitivity - fraction/(1-fraction)*constrainer
-                concentration_uncertainty: float = np.abs(constrained_sensitivity * uncertainty)
+                constrained_sensitivity = unconstrained_sensitivity - fraction/(1-fraction)*constrainer
+                concentration_uncertainty = np.abs(constrained_sensitivity * uncertainty)
                 concentration_uncertainties[functional] = concentration_uncertainty
             elif fraction_type == 'wo':
                 constrained_sensitivity = (unconstrained_sensitivity - constrainer) / (1 - fraction)
@@ -889,10 +888,10 @@ class Analysis():
     @classmethod
     def get_density_uncertainty(
         cls,
-        sensitivities: "Sensitivities",
+        sensitivities: Sensitivities,
         uncertainty: float,
-        targets: NDArray[np.intp],
-        uncertainty_type: str = 'normal',
+        targets: int,
+        uncertainty_type: str = 'normal'
     ) -> dict[str, float]:
         """Propagate the uncertainties of the functionals in the Sensitivities
         instance based upon the idea that macroscopic XS are strictly defined
@@ -908,7 +907,7 @@ class Analysis():
             Uncertainty in the concentration: 68% of the confidence interval
             for the 'normal' distribution or 1/2 of the range of the 
             'uniform' or 'triangular' distributions
-        targets: numpy.ndarray of int
+        targets: iterable of int
             ZAM values for the nuclide whose uncertainty
             is provided in the uncertainty parameter. Make sure the
             target nuclides are located in the volume of interest
@@ -926,7 +925,7 @@ class Analysis():
         
         """
 
-        uncertainties: dict[str, float] = {}
+        uncertainties = {}
 
         for functional in sensitivities.functionals:
             sensitivity: float = 0
@@ -979,7 +978,7 @@ class Analysis():
         if cost_type not in ('A', 'B', 'C'):
             raise NotImplementedError(f"The cost type '{cost_type}' is not implemented, only 'A', 'B', and 'C' are supported.")
 
-        cost_coefficient: float
+        cost_coefficient = 0.0
 
         if (zam in (922350, 922380, 942390)) & (reaction in (18, 102, 452)):
             if cost_type == 'A':
@@ -1029,20 +1028,20 @@ class Analysis():
     @classmethod
     def _weight_function(
         cls,
-        uncertainties_to_minimize: NDArray[np.floating],
-        costs: NDArray[np.floating],
-        base_uncertainties: NDArray[np.floating],
+        uncertainties_to_minimize: Sequence[float],
+        costs: Sequence[float],
+        base_uncertainties: Sequence[float]
     ) -> float:
         """An auxiliary function to calculate the sum of the weighted inverse
         variances weight_i/uncertainties_i**2.
 
         Parameters
         ----------
-        uncertainties_to_minimize : numpy.ndarray
+        uncertainties_to_minimize : iterable of float
             Values to propagate the uncertainties
-        costs : numpy.ndarray
+        costs : iterable of float
             Cost coefficients corresponding to the uncertainty being minimized.
-        base_uncertainties : numpy.ndarray
+        base_uncertainties : iterable of float
             Base values of the uncertainties being minimized to make sure that
             zero value uncertainties are still handled correctly.
             
@@ -1063,10 +1062,10 @@ class Analysis():
     @classmethod
     def _weight_jacobian(
         cls,
-        uncertainties_to_minimize: NDArray[np.floating],
-        costs: NDArray[np.floating],
-        base_uncertainties: NDArray[np.floating],
-    ) -> NDArray[np.floating]:
+        uncertainties_to_minimize: Sequence[float],
+        costs: Sequence[float],
+        base_uncertainties: Sequence[float]
+    ) -> np.ndarray:
         """An auxiliary function to calculate the Jacobian of
         the sum of the weighted inverse variances, which is
         -2*weight_i/uncertainties_i**3.
@@ -1099,25 +1098,25 @@ class Analysis():
     @classmethod
     def tars(
         cls,
-        model_sensitivities: list["Sensitivities"],
-        covariances: "Covariances",
+        model_sensitivities: Sequence[Sensitivities],
+        covariances: Covariances,
         tars: dict[str, float],
         number_of_reactions: int = 10,
         lower_boundary: float = 0.005,
         method: str = 'trust-constr',
         cost_type: str = 'A',
-        energy_costs: list[float] | None = None,
-        maxiter: int = 1000,
+        energy_costs: Optional[Sequence[float]] = None,
+        maxiter:int = 1000,
         tol: float = 1e-5,
-    ) -> "Covariances":
+    ) -> Covariances:
         """Calculate target accuracy requirements based upon
         a Sensitivities instance, a Covariances instance
         and TAR values.
          
         Parameters
         ----------
-        model_sensitivities : list of Sensitivities
-            List of Sensitivities instances
+        model_sensitivities : iterable of Sensitivities
+            Iterable of Sensitivities instances
         covariances : Covariances
             Covariances instance
         tars: dict of {str : float}
@@ -1153,7 +1152,7 @@ class Analysis():
             report) is set to maximum, i.e. the (n,n') cost is set to (chi).
             The default value is 'A', assuming there is no difference among
             reactions.
-        energy_costs : list of float, optional
+        energy_costs : iterable of float, optional
             List of energy weights identifying the cost at each energy group that
             is multiplied with cost_type to get the total cost in the TAR exercise.
             The default value is None, meaning there is no energy dependence of the
@@ -1186,8 +1185,8 @@ class Analysis():
             lower_boundary = 1e-5
         
         # Variables for iteration
-        group_number: int = len(covariances.group_structure) - 1
-        base_indices: NDArray[np.intp] = np.arange(number_of_reactions)
+        group_number = len(covariances.group_structure) - 1
+        base_indices = np.arange(number_of_reactions)
         
         if energy_costs == None:
             energy_costs = [1]*group_number
@@ -1195,8 +1194,8 @@ class Analysis():
         # Get dataframe for the uncertainty sources
         # Get MTs present in the dataframe to avoid accounting others
         # Remove cross-correlations, cross-correlations are fixed during next step
-        all_reactions: set[int] = set()
-        dfs: list[dict[str, pd.DataFrame]] = []
+        all_reactions = set()
+        dfs = []
         for sensitivities in model_sensitivities:
             model_dfs: dict[str, pd.DataFrame] = {}
             for functional in tars:
@@ -1207,17 +1206,17 @@ class Analysis():
             dfs.append(model_dfs)
 
         # Populate list of uncertainties_to_minimize based upon the number of reactions
-        uncertainties: list[float] = []
-        zams: list[int] = []
-        reactions: list[int] = []
-        zam_covs: list["Covariance"] = []
-        zam_mt: list[tuple[int, int]] = []
-        costs: list[float] = []
+        uncertainties = []
+        zams = []
+        reactions = []
+        zam_covs = []
+        zam_mt = []
+        costs = []
         for s, sensitivities in enumerate(model_sensitivities):
             for functional in tars:
                 for row in base_indices:
-                    mt: int  = int(dfs[s][functional]['Reaction 1'][row][2:])
-                    zam: int = int(dfs[s][functional]['Nuclide 1'][row])
+                    mt  = int(dfs[s][functional]['Reaction 1'][row][2:])
+                    zam = int(dfs[s][functional]['Nuclide 1'][row])
 
                     if zam not in zams:
                         zam_covs.extend(covariances.get_by_zam(zam))
@@ -1231,26 +1230,26 @@ class Analysis():
                         cov = covariances.get_by_params(zam, zam, mt, mt)
 
                         # Get the uncertainties from the covariance matrix
-                        diag: NDArray[np.floating] = np.diag(cov.dataframe.to_numpy())
+                        diag = np.diag(cov.dataframe.to_numpy())
                         uncertainties.extend(np.sqrt(diag))
         
-        uncertainties_arr: NDArray[np.floating] = np.array(uncertainties)
+        uncertainties = np.array(uncertainties)
 
         # Redefine energy costs 
-        energy_costs = energy_costs * int(len(uncertainties_arr)/group_number)
-        costs_arr: NDArray[np.floating] = np.multiply(costs, energy_costs)
+        energy_costs = energy_costs * int(len(uncertainties)/group_number)
+        costs = np.multiply(costs, energy_costs)
 
         # Populate list of covs which are going to be tweaked
         # This list includes both cross-material and cross-reaction correlations
         zam_covs = [cov for cov in zam_covs if cov.reaction_1 in all_reactions]
 
         # Update indices for all the functionals present
-        indices: NDArray[np.intp] = np.arange(len(zam_mt))
-        uncertainty_indices: NDArray[np.intp] = np.append(indices*group_number, [(indices[-1]+1)*group_number])
+        indices = np.arange(len(zam_mt))
+        uncertainty_indices = np.append(indices*group_number, [(indices[-1]+1)*group_number])
 
         # Prepare covariance list which is going to be accessed during the
         # optimization
-        temp_covs: list[list["Covariance"]] = []
+        temp_covs = []
         for row in indices:
             mt  = reactions[row]
             zam = zams[row]
@@ -1258,9 +1257,9 @@ class Analysis():
 
         # Prepare sensitivity list which is going to be accessed during the
         # optimization
-        temp_senses: list[dict] = []
+        temp_senses = []
         for sensitivities in model_sensitivities:
-            model_senses: dict = {}
+            model_senses = {}
             for functional in tars:
                 for row in indices:
                     mt  = reactions[row]
@@ -1275,15 +1274,15 @@ class Analysis():
             temp_senses.append(model_senses)
 
         # Constraints for uncertainties: (unc_i)_min <= unc_i <= (unc_i)_0
-        lower_boundaries: NDArray[np.floating] = np.array([unc if unc < lower_boundary else lower_boundary for unc in uncertainties_arr])
-        upper_boundaries: NDArray[np.floating] = uncertainties_arr.copy()
+        lower_boundaries = np.array([unc if unc < lower_boundary else lower_boundary for unc in uncertainties])
+        upper_boundaries = uncertainties.copy()
 
         ######################
         # The second part
         ######################
         # Sandwich formula functions to be constrained to TAR
         def sandwich_constraint(
-            uncertainties_to_minimize: NDArray[np.floating],
+            uncertainties_to_minimize: Sequence[float],
             functional: str,
             model_index: int,
         ) -> float:
@@ -1292,7 +1291,7 @@ class Analysis():
 
             Parameters
             ----------
-            uncertainties_to_minimize : numpy.ndarray
+            uncertainties_to_minimize : iterable of float
                 Values to propagate the uncertainties
             functional : str
                 Functional name to access the sensitivity for a chosen 
@@ -1306,17 +1305,17 @@ class Analysis():
                 Return the functional variance 
 
             """  
-            delayed_used: bool = ('beta' in functional) | ('lambda' in functional)
+            delayed_used = ('beta' in functional) | ('lambda' in functional)
 
-            variance: float = 0
+            variance = 0.
 
             for row in indices:
             
                 mt  = reactions[row]
                 zam = zams[row]
     
-                base_diag: NDArray[np.floating] = uncertainties_arr[uncertainty_indices[row]:uncertainty_indices[row+1]]
-                new_diag: NDArray[np.floating]  = uncertainties_to_minimize[uncertainty_indices[row]:uncertainty_indices[row+1]]
+                base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
+                new_diag  = uncertainties_to_minimize[uncertainty_indices[row]:uncertainty_indices[row+1]]
                 
                 for cov in temp_covs[row]:
                     if ~delayed_used & ((cov.reaction_1 == 456) | (cov.reaction_2 == 456) | (cov.reaction_1 == 455) | (cov.reaction_2 == 455)):
@@ -1324,7 +1323,7 @@ class Analysis():
                     elif delayed_used & ((cov.reaction_1 == 452) | (cov.reaction_2 == 452)):
                         continue
                     
-                    symm_coef: int = 1
+                    symm_coef = 1
 
                     sens_1 = temp_senses[model_index][(functional, cov.zam_1, cov.reaction_1)]
                     if (cov.zam_1 == zam) & (cov.reaction_1 == mt):
@@ -1344,11 +1343,11 @@ class Analysis():
                         second_new = 1
                         symm_coef = 2
 
-                    matrix: NDArray[np.floating]     = cov.dataframe.to_numpy()
-                    base_outer: NDArray[np.floating] = np.outer(first_base, second_base)
-                    cor: NDArray[np.floating]        = np.divide(matrix, base_outer, out = np.zeros_like(matrix), where = base_outer != 0 )
-                    new_outer: NDArray[np.floating]  = np.outer(first_new, second_new)
-                    new_cov_mat: NDArray[np.floating]  = cor * new_outer   
+                    matrix      = cov.dataframe.to_numpy()
+                    base_outer  = np.outer(first_base, second_base)
+                    cor         = np.divide(matrix, base_outer, out = np.zeros_like(matrix), where = base_outer != 0 )
+                    new_outer   = np.outer(first_new, second_new)
+                    new_cov_mat = cor * new_outer   
                     sandwich: float = sens_1.sensitivity_vector @ new_cov_mat @ sens_2.sensitivity_vector
                     variance +=  symm_coef * sandwich
 
@@ -1359,7 +1358,7 @@ class Analysis():
         # The third part
         ######################
         # Non-linear constraints for trust-constr
-        tar_constraints: list = []
+        tar_constraints = []
         for s, sensitivities in enumerate(model_sensitivities):
             for functional in tars:
                 tar_constraint = scipy.optimize.NonlinearConstraint(lambda x, functional=functional, model_index=s: sandwich_constraint(x, functional, model_index),
@@ -1372,10 +1371,10 @@ class Analysis():
             
             bounds = scipy.optimize.Bounds(lower_boundaries, upper_boundaries)
 
-            res = scipy.optimize.minimize(lambda x, costs=costs_arr, base_uncertainties=uncertainties_arr: cls._weight_function(x, costs, uncertainties_arr),
-                                          uncertainties_arr,
+            res = scipy.optimize.minimize(lambda x, costs=costs, base_uncertainties=uncertainties: cls._weight_function(x, costs, uncertainties),
+                                          uncertainties,
                                           method = 'trust-constr',
-                                          jac = lambda x, costs=costs_arr, base_uncertainties=uncertainties_arr: cls._weight_jacobian(x, costs, uncertainties_arr),
+                                          jac = lambda x, costs=costs, base_uncertainties=uncertainties: cls._weight_jacobian(x, costs, uncertainties),
                                           hess = scipy.optimize.SR1(),
                                           constraints = tar_constraints,
                                           options = {'disp': True,  'maxiter': maxiter},
@@ -1387,7 +1386,7 @@ class Analysis():
         ######################
         # The fourth part
         ######################
-        optimized_uncertainties: NDArray[np.floating] = np.where(uncertainties_arr == 0, 0, res.x)
+        optimized_uncertainties = np.where(uncertainties == 0, 0, res.x)
         print(optimized_uncertainties)
 
         # Completely copies the main covariances to avoid rewriting them
@@ -1397,14 +1396,14 @@ class Analysis():
         zam_covs = []
         [zam_covs.extend(target_covariances.get_by_zam(zam)) for zam in set(zams)]
 
-        changed_covariances: list[tuple[int, int]] = []
+        changed_covariances = []
         for row in indices:
             mt  = reactions[row]
             zam = zams[row]
             changed_covariances.append((zam,mt))
 
             temp_covs_2 = [cov for cov in zam_covs if ((cov.zam_1 == zam) & (cov.reaction_1 == mt)) | ((cov.zam_2 == zam) & (cov.reaction_2 == mt))]
-            base_diag = uncertainties_arr[uncertainty_indices[row]:uncertainty_indices[row+1]]
+            base_diag = uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
             new_diag  = optimized_uncertainties[uncertainty_indices[row]:uncertainty_indices[row+1]]
             
             for cov in temp_covs_2:
@@ -1428,9 +1427,9 @@ class Analysis():
                 new_outer  = np.outer(first_new, second_new)
                 cov.dataframe[:] = cor * new_outer   
 
-        base_cost: float  = cls._weight_function(uncertainties_arr, costs_arr, uncertainties_arr)
-        final_cost: float = cls._weight_function(optimized_uncertainties, costs_arr, uncertainties_arr)
-        cost: float = final_cost - base_cost
+        base_cost  = cls._weight_function(uncertainties, costs, uncertainties)
+        final_cost = cls._weight_function(optimized_uncertainties, costs, uncertainties)
+        cost = final_cost - base_cost
 
         print('The total number of symmetric covariances tweaked:', len(zam_mt))
         print('The tweaked symmetric covariances:', changed_covariances)

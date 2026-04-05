@@ -1,9 +1,9 @@
 from __future__ import annotations
+from typing import Sequence, Optional
 
 import numpy as np
 import pandas as pd
 import os
-from numpy.typing import NDArray
 
 from  .bridge import Serpent, SCALE
 
@@ -80,10 +80,10 @@ class Sensitivities():
     """
 
     def __init__(self) -> None:
-        self._group_structure: list[float] = []
-        self._sensitivities: list[Sensitivity] = []
-        self._functionals: list[str] = []
-        self._zams: list[int] = []
+        self._group_structure : Sequence[float] = []
+        self._sensitivities : Sequence[Sensitivity] = []
+        self._functionals : Sequence[str] = []
+        self._zams : Sequence[int] = []
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({len(self.functionals)!r}, {len(self.zams)!r}, {len(self.sensitivities)!r}, {(len(self.group_structure)-1)!r})")
@@ -93,10 +93,10 @@ class Sensitivities():
         return self._group_structure
 
     @group_structure.setter
-    def group_structure(self, group_structure: list[float] | NDArray[np.floating]) -> None:
+    def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
         if group_number >=2 &  group_number <= 1501:
-            self._group_structure = group_structure
+            self._group_structure = np.array(group_structure)
         else:
             raise ValueError(f'The number of group must be between 1 and 1500 due to the NJOY limitations, \
                              but {group_number-1} is provided')
@@ -537,14 +537,15 @@ class Sensitivities():
 
         print('The data have been imported successfully.')
 
-    def get_by_functional(self, functional: str) -> NDArray:
+    def get_by_functional(self, functional: str) -> np.ndarray:
         """Get a list of Sensitivity instances by a functional 
         from a Sensetivities instance.
 
         Parameters
         ----------
         functional : str
-            Functional name           
+            Functional name     
+
         Returns
         -------
         numpy.ndarray
@@ -554,7 +555,7 @@ class Sensitivities():
 
         return np.array([sensitivity for sensitivity in self.sensitivities if sensitivity.functional == functional])
 
-    def get_by_zam(self, zam: int) -> list[Sensitivity]:
+    def get_by_zam(self, zam: int) -> np.ndarray:
         """Get a list of Sensitivity instances by a ZAM value
         from a Sensetivities instance.
 
@@ -565,14 +566,14 @@ class Sensitivities():
 
         Returns
         -------
-        list
+        numpy.ndarray
             Sensitivity instances with the same ZAM in an numpy.ndarray .
 
         """
 
-        return [sensitivity for sensitivity in self.sensitivities if sensitivity.zam == zam]
+        return np.array([sensitivity for sensitivity in self.sensitivities if sensitivity.zam == zam])
 
-    def get_by_reaction(self, reaction: int) -> list[Sensitivity]:
+    def get_by_reaction(self, reaction: int) -> np.ndarray:
         """Get a list of Sensitivity instances by an MT number
         from a Sensetivities instance.
 
@@ -583,7 +584,7 @@ class Sensitivities():
 
         Returns
         -------
-        list
+        numpy.ndarray
             Sensitivity instances with the same MT number in an numpy.ndarray .
 
         """
@@ -669,7 +670,7 @@ class Sensitivities():
 
         Parameters
         ----------
-        name: str
+        name: str, optional
             Path where to save the sensitivities, e.g., 'MOX3600_sens.xlsx'.
             The default value is 'Sensitivity.xlsx'.
         sort: bool, optional
@@ -716,14 +717,14 @@ class Sensitivity():
     """
 
     def __init__(self) -> None:
-        self._functional: str | None = None
-        self._zam: int | None = None
-        self._reaction: int | None = None
-        self._sensitivity: float | None = None
-        self._uncertainty: float | None = None
-        self._group_structure: list[float] = []
-        self._sensitivity_vector: NDArray[np.floating] = np.array([])
-        self._uncertainties: NDArray[np.floating] | None = None
+        self._functional: Optional[str] = None
+        self._zam: Optional[int] = None
+        self._reaction: Optional[int] = None
+        self._sensitivity: Optional[float] = None
+        self._uncertainty: Optional[float] = None
+        self._group_structure: Sequence[float] = []
+        self._sensitivity_vector: Sequence[float] = []
+        self._uncertainties: Optional[Sequence[float]] = None
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.functional!r}, {self.zam!r}, {self.reaction!r}, {(len(self.group_structure)-1)!r})")
@@ -769,32 +770,32 @@ class Sensitivity():
         self._uncertainty = uncertainty    
 
     @property
-    def group_structure(self) -> list[float]:
+    def group_structure(self) -> np.ndarray:
         return self._group_structure
 
     @group_structure.setter
-    def group_structure(self, group_structure: list[float] | NDArray[np.floating]) -> None:
+    def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
         if group_number >=2 &  group_number <= 1501:
-            self._group_structure = group_structure
+            self._group_structure = np.array(group_structure)
         else:
             raise ValueError(f'The number of group must be between 1 and 1500 due to NJOY limitations, \
                              but {group_number-1} is provided')
 
     @property
-    def sensitivity_vector(self) -> NDArray[np.floating]:
+    def sensitivity_vector(self) -> np.ndarray:
         return self._sensitivity_vector
 
     @sensitivity_vector.setter
-    def sensitivity_vector(self, sensitivity_vector: list[float] | NDArray[np.floating]) -> None:
+    def sensitivity_vector(self, sensitivity_vector: Sequence[float]) -> None:
         self._sensitivity_vector = np.array(sensitivity_vector) 
 
     @property
-    def uncertainty_vector(self) -> NDArray[np.floating]:
+    def uncertainty_vector(self) -> np.ndarray:
         return self._uncertainty_vector
 
     @uncertainty_vector.setter
-    def uncertainty_vector(self, uncertainty_vector: list[float] | NDArray[np.floating]) -> None:
+    def uncertainty_vector(self, uncertainty_vector: Sequence[float]) -> None:
         self._uncertainty_vector = np.array(uncertainty_vector) 
 
     def from_serpent(self, file: str) -> Sensitivity:
