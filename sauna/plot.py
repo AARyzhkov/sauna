@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import Optional, Sequence
+
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
@@ -219,13 +222,21 @@ class Plot():
         raise TypeError('A static class cannot be instantiated')
     
     @staticmethod
-    def plot_sensitivity(sensitivities, name='sensitivity_profile', format = 'svg', show_integral = True, show_uncertainty  = True, normalization_type = 0, annotations = None, width=3.54):
+    def plot_sensitivity(sensitivities : Sequence[Sensitivity], # type: ignore[name-defined]
+                         name : str = 'sensitivity_profile',
+                         format : str = 'svg',
+                         show_integral : bool = True,
+                         show_uncertainty : bool  = True,
+                         normalization_type : int = 0,
+                         annotations : Optional[Sequence[str]] = None,
+                         width : float = 3.54
+                        ) -> None:
         """Plot sensitivity profile
         
         Parameters
         ----------
-        sensitivities : List
-            List of the Sensitivity instances
+        sensitivities : iterable of Sensitivity
+            Iterable of the Sensitivity instances
         name : str, optional
             Name of the plot to save. The default value is
             'sensitivity_profile'.
@@ -244,8 +255,8 @@ class Plot():
             1 - per unit energy (can be recommended when different group structures are considered)
             2 - per unit lethargy
             The default value is 0.
-        annotations : list, optional
-            List of additional comments to the legened on the plot. The number
+        annotations : iterable of str, optional
+            Iterable of additional comments to the legened on the plot. The number
             of elements have to correspond to the sensitivities attribue length.
         width : float, optional
             The width of the plot in inches. The default value is 3.53.
@@ -349,25 +360,30 @@ class Plot():
         fig.savefig(f"{name}.{format}", format = format, dpi = 1000, bbox_inches='tight')
 
     @staticmethod
-    def plot_uncertainty(covariances, name='uncertainty_profile', format = 'svg', annotations = None, width=3.54):
+    def plot_uncertainty(covariances : Sequence[Covariance], # type: ignore[name-defined]
+                         name : str = 'uncertainty_profile',
+                         format : str = 'svg',
+                         annotations : Optional[Sequence[str]] = None,
+                         width : float = 3.54
+                        ) -> None:
         """Plot the diagonal values of a covariance
         matrix.
         
         Parameters
         ----------
-        covariances : List
-            List of the Covariances instances
+        covariances : iterable of Covariance
+            Iterable of the Covariances instances
         name : str, optional
             Name of the plot to save. The default value is
             'uncertainty_profile'.
         format : str, optional 
             Format of the plot to save. The default value is
             'svg'.
-        annotations : List
-            List of values to add at the end of the legend if
+        annotations : iterable of str
+            Iterable of values to add at the end of the legend if
             the plots have to be differentiated when the same
             uncertainties from different sources are used.
-        width : str, optional
+        width : float, optional
             The width of the plot in inches. The default value is 3.53.
 
         """      
@@ -449,21 +465,26 @@ class Plot():
         fig.savefig(f"{name}.{format}", format = format, dpi = 1000, bbox_inches='tight')
 
     @staticmethod
-    def plot_cov(covariance,  name='cov_matrix', format = 'svg', tick_step = 1, type = 'matplotlib'):
+    def plot_cov(covariance : Covariance, # type: ignore[name-defined]
+                 name : str = 'cov_matrix',
+                 format : str = 'svg',
+                 tick_step : int = 1,
+                 type : str = 'matplotlib'
+                ) -> None:
         """Plot a covariance matrix from a Covariance
         instance.
         
         Parameters
         ----------
-        covariance : Cobariance
+        covariance : Covariance
             Covariances instance
-        name : str
+        name : str, optional
             Name of the plot
-        format : str
+        format : str, optional
             Format of the plot
-        tick_step : int
+        tick_step : int, optional
             Number of ticks between numbers
-        type : str
+        type : str, optional
             Type of plot: {'matplotlib', 'seaborn'}
 
         """      
@@ -536,7 +557,12 @@ class Plot():
         fig.savefig(f"{name}.{format}", format = format, dpi=1000)
 
     @staticmethod
-    def plot_cor(covariance, covariance_1 = None, covariance_2 = None, name='corr_matrix', format = 'svg'):
+    def plot_cor(covariance : Covariance, # type: ignore[name-defined]
+                 covariance_1 : Optional[Covariance] = None, # type: ignore[name-defined]
+                 covariance_2 : Optional[Covariance] = None, # type: ignore[name-defined]
+                 name : str = 'corr_matrix',
+                 format : str = 'svg'
+                ) -> None:
         """Plot a correlation matrix from a Covariance
         instance as an NJOY's COVR-like plot.
         
