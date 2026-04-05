@@ -1106,7 +1106,7 @@ class Analysis():
         method: str = 'trust-constr',
         cost_type: str = 'A',
         energy_costs: Optional[Sequence[float]] = None,
-        maxiter:int = 1000,
+        maxiter: int = 1000,
         tol: float = 1e-5,
     ) -> Covariances:
         """Calculate target accuracy requirements based upon

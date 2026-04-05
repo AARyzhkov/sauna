@@ -222,14 +222,14 @@ class Plot():
         raise TypeError('A static class cannot be instantiated')
     
     @staticmethod
-    def plot_sensitivity(sensitivities : Sequence[Sensitivity], # type: ignore[name-defined]
-                         name : str = 'sensitivity_profile',
-                         format : str = 'svg',
-                         show_integral : bool = True,
-                         show_uncertainty : bool  = True,
-                         normalization_type : int = 0,
-                         annotations : Optional[Sequence[str]] = None,
-                         width : float = 3.54
+    def plot_sensitivity(sensitivities: Sequence[Sensitivity], # type: ignore[name-defined]
+                         name: str = 'sensitivity_profile',
+                         format: str = 'svg',
+                         show_integral: bool = True,
+                         show_uncertainty: bool  = True,
+                         normalization_type: int = 0,
+                         annotations: Optional[Sequence[str]] = None,
+                         width: float = 3.54
                         ) -> None:
         """Plot sensitivity profile
         
@@ -360,11 +360,11 @@ class Plot():
         fig.savefig(f"{name}.{format}", format = format, dpi = 1000, bbox_inches='tight')
 
     @staticmethod
-    def plot_uncertainty(covariances : Sequence[Covariance], # type: ignore[name-defined]
-                         name : str = 'uncertainty_profile',
-                         format : str = 'svg',
-                         annotations : Optional[Sequence[str]] = None,
-                         width : float = 3.54
+    def plot_uncertainty(covariances: Sequence[Covariance], # type: ignore[name-defined]
+                         name: str = 'uncertainty_profile',
+                         format: str = 'svg',
+                         annotations: Optional[Sequence[str]] = None,
+                         width: float = 3.54
                         ) -> None:
         """Plot the diagonal values of a covariance
         matrix.
@@ -465,11 +465,11 @@ class Plot():
         fig.savefig(f"{name}.{format}", format = format, dpi = 1000, bbox_inches='tight')
 
     @staticmethod
-    def plot_cov(covariance : Covariance, # type: ignore[name-defined]
-                 name : str = 'cov_matrix',
-                 format : str = 'svg',
-                 tick_step : int = 1,
-                 type : str = 'matplotlib'
+    def plot_cov(covariance: Covariance, # type: ignore[name-defined]
+                 name: str = 'cov_matrix',
+                 format: str = 'svg',
+                 tick_step: int = 1,
+                 type: str = 'matplotlib'
                 ) -> None:
         """Plot a covariance matrix from a Covariance
         instance.
@@ -557,11 +557,11 @@ class Plot():
         fig.savefig(f"{name}.{format}", format = format, dpi=1000)
 
     @staticmethod
-    def plot_cor(covariance : Covariance, # type: ignore[name-defined]
-                 covariance_1 : Optional[Covariance] = None, # type: ignore[name-defined]
-                 covariance_2 : Optional[Covariance] = None, # type: ignore[name-defined]
-                 name : str = 'corr_matrix',
-                 format : str = 'svg'
+    def plot_cor(covariance: Covariance, # type: ignore[name-defined]
+                 covariance_1: Optional[Covariance] = None, # type: ignore[name-defined]
+                 covariance_2: Optional[Covariance] = None, # type: ignore[name-defined]
+                 name: str = 'corr_matrix',
+                 format: str = 'svg'
                 ) -> None:
         """Plot a correlation matrix from a Covariance
         instance as an NJOY's COVR-like plot.
