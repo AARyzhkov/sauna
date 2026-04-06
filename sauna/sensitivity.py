@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import Sequence, Optional
+
 import numpy as np
 import pandas as pd
 import os
@@ -76,52 +79,52 @@ class Sensitivities():
         
     """
 
-    def __init__(self):
-        self._group_structure = []
-        self._sensitivities = []
-        self._functionals = []
-        self._zams = []
+    def __init__(self) -> None:
+        self._group_structure : Sequence[float] = []
+        self._sensitivities : Sequence[Sensitivity] = []
+        self._functionals : Sequence[str] = []
+        self._zams : Sequence[int] = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({len(self.functionals)!r}, {len(self.zams)!r}, {len(self.sensitivities)!r}, {(len(self.group_structure)-1)!r})")
 
     @property
-    def group_structure(self):
+    def group_structure(self) -> list[float]:
         return self._group_structure
 
     @group_structure.setter
-    def group_structure(self, group_structure):
+    def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
         if group_number >=2 &  group_number <= 1501:
-            self._group_structure = group_structure
+            self._group_structure = np.array(group_structure)
         else:
             raise ValueError(f'The number of group must be between 1 and 1500 due to the NJOY limitations, \
                              but {group_number-1} is provided')
 
     @property
-    def sensitivities(self):
+    def sensitivities(self) -> list[Sensitivity]:
         return self._sensitivities
     
     @sensitivities.setter
-    def sensitivities(self, sensitivities):
+    def sensitivities(self, sensitivities: list[Sensitivity]) -> None:
         self._sensitivities = sensitivities
 
     @property
-    def functionals(self):
+    def functionals(self) -> list[str]:
         return self._functionals
 
     @property
-    def zams(self):
+    def zams(self) -> list[int]:
         return self._zams
     
-    def append(self, sensitivity):
+    def append(self, sensitivity: Sensitivity) -> None:
         self._sensitivities.append(sensitivity)
         if sensitivity.functional not in self.functionals:
             self._functionals.append(sensitivity.functional)  
         if sensitivity.zam not in self.zams:
             self._zams.append(sensitivity.zam) 
         
-    def extend(self, sensitivities):
+    def extend(self, sensitivities: list[Sensitivity]) -> None:
         self._sensitivities.extend(sensitivities)
         for sens in sensitivities:
             if sens.functional not in self.functionals:
@@ -130,7 +133,7 @@ class Sensitivities():
                 self._zams.append(sens.zam) 
 
     @classmethod
-    def reactivity_difference(cls, sensitivities_nom, sensitivities_pert, keff_nom, keff_pert, dkeff_nom = 0, dkeff_pert = 0, functional = 'Reactivity-difference'):
+    def reactivity_difference(cls, sensitivities_nom: Sensitivities, sensitivities_pert: Sensitivities, keff_nom: float, keff_pert: float, dkeff_nom: float = 0, dkeff_pert: float = 0, functional: str = 'Reactivity-difference') -> Sensitivities:
         """Calculate senitivity of a reactivity difference to quantify 
         the influence of the inputs on the reactivity effects.
         
@@ -257,7 +260,7 @@ class Sensitivities():
         return reactivity_sensitivities
 
     @classmethod
-    def beta_eff(cls, sensitivities_nom, sensitivities_prompt, keff_nom, keff_prompt,  functional = 'beta-eff'):
+    def beta_eff(cls, sensitivities_nom: Sensitivities, sensitivities_prompt: Sensitivities, keff_nom: float, keff_prompt: float, functional: str = 'beta-eff') -> Sensitivities:
         """Calculate senitivity of an effective delayed neutron fraction via
         the nominal eigenvalue and prompt eigenvalue
         
@@ -307,7 +310,7 @@ class Sensitivities():
         return sensitivities_b
     
     @classmethod
-    def ratio(cls, sensitivities_num, sensitivities_denom, functional = 'Ratio'):
+    def ratio(cls, sensitivities_num: Sensitivities, sensitivities_denom: Sensitivities, functional: str = 'Ratio') -> Sensitivities:
         """Calculate senitivity of a ratio of two arbitrary sensitivities.
         For instnace, it can be used to calculate the effective neutron generation
         time via the effective life-time and the eigenvalue
@@ -354,7 +357,7 @@ class Sensitivities():
         return sensitivities_r
 
     @classmethod
-    def promt_decay(cls, sensitivities_prompt, sensitivities_l, k_prompt, functional = 'alpha'):
+    def promt_decay(cls, sensitivities_prompt: Sensitivities, sensitivities_l: Sensitivities, k_prompt: float, functional: str = 'alpha') -> Sensitivities:
         """Calculate senitivity of a prompt decay constant also known as 
         Rossi-alpha or prompt alpha eigenvalue via the sensitivities of the
         prompt eigenvalue and effective neutron life-time.
@@ -404,7 +407,7 @@ class Sensitivities():
         return sensitivities_a
 
     @classmethod
-    def breeding_ratio(cls, sensitivities_gamma, sensitivities_fission, R_gamma, R_fission, discard_scattering = False, functional = 'Breeding Ratio'):
+    def breeding_ratio(cls, sensitivities_gamma: Sensitivities, sensitivities_fission: Sensitivities, R_gamma: float, R_fission: float, discard_scattering: bool = False, functional: str = 'Breeding Ratio') -> Sensitivities:
         """Calculate senitivity of a breeding ratio via the sensitivities
         of the fissile-gamma/fertile-gamma ratio and the fissile-fission/
         fertile-gamma ratio. The method is intented to avoid the limitation
@@ -465,13 +468,13 @@ class Sensitivities():
 
         return br_sensitivities
 
-    def from_serpent(self, file):
+    def from_serpent(self, file: str) -> None:
         """Import sensitivity data of all the reactions from a Serpent output 
         file (_sens0.m) to the Sensitivities instance.
 
         Parameters
         ----------
-        file: str
+        file : str
             Path to the Serpent output, e.g., './MOX3600_sens0.m'.
 
         """  
@@ -490,7 +493,7 @@ class Sensitivities():
                 sensitivity.uncertainty = sens.uncertainty
                 self.append(sensitivity)
 
-    def from_scale(self, file, type='B', functional = 'Eigenvalue'):
+    def from_scale(self, file: str, type: str = 'B', functional: str = 'Eigenvalue') -> None:
         """Import sensitivities from an SDF (Sensitivity Data
         File) file of SCALE to the Sensitivities instance.
 
@@ -534,14 +537,15 @@ class Sensitivities():
 
         print('The data have been imported successfully.')
 
-    def get_by_functional(self, functional):
+    def get_by_functional(self, functional: str) -> np.ndarray:
         """Get a list of Sensitivity instances by a functional 
         from a Sensetivities instance.
 
         Parameters
         ----------
         functional : str
-            Functional name           
+            Functional name     
+
         Returns
         -------
         numpy.ndarray
@@ -551,7 +555,7 @@ class Sensitivities():
 
         return np.array([sensitivity for sensitivity in self.sensitivities if sensitivity.functional == functional])
 
-    def get_by_zam(self, zam):
+    def get_by_zam(self, zam: int) -> np.ndarray:
         """Get a list of Sensitivity instances by a ZAM value
         from a Sensetivities instance.
 
@@ -562,14 +566,14 @@ class Sensitivities():
 
         Returns
         -------
-        list
+        numpy.ndarray
             Sensitivity instances with the same ZAM in an numpy.ndarray .
 
         """
 
-        return [sensitivity for sensitivity in self.sensitivities if sensitivity.zam == zam]
+        return np.array([sensitivity for sensitivity in self.sensitivities if sensitivity.zam == zam])
 
-    def get_by_reaction(self, reaction):
+    def get_by_reaction(self, reaction: int) -> np.ndarray:
         """Get a list of Sensitivity instances by an MT number
         from a Sensetivities instance.
 
@@ -580,14 +584,14 @@ class Sensitivities():
 
         Returns
         -------
-        list
+        numpy.ndarray
             Sensitivity instances with the same MT number in an numpy.ndarray .
 
         """
 
         return [sensitivity for sensitivity in self.sensitivities if sensitivity.reaction == reaction]
 
-    def get_by_params(self, functional, zam, reaction):
+    def get_by_params(self, functional: str, zam: int, reaction: int) -> Sensitivity:
         """Get a list of Sensitivity instances by a functional,
         ZAM, reaction from a Sensetivities instance.
 
@@ -623,22 +627,24 @@ class Sensitivities():
 
             return sensitivity
 
-    def to_dataframe(self, functional, sort=True):
+    def to_dataframe(self, functional: str, sort: bool = True) -> pd.DataFrame:
         """Export sensitivity data of all the relative sensitivities 
         from a Sensitivities instance to a dataframe. It generates diffirent
         sheet for given functional.
 
         Parameters
         ----------
-        name: functional
+        name : functional
             Name of the functional
-        sort: bool, optional
+        sort : bool, optional
             Sort by absolute sensitivities. The default value is
             True.       
 
         Returns
         -------
-        sensitivity_df : pandas.DataFrame
+        pandas.DataFrame
+            Dataframe containing integral sensitivities for a requested
+            functional
         
         """ 
 
@@ -659,17 +665,17 @@ class Sensitivities():
 
         return sensitivity_df
 
-    def to_excel(self, name='Sensitivity.xlsx', sort = True):
+    def to_excel(self, name: str = 'Sensitivity.xlsx', sort: bool = True) -> None:
         """Export sensitivity data of all the integral relative sensitivities 
         from a Sensitivities instance. Generates diffirent sheet for each 
         functional.
 
         Parameters
         ----------
-        name: str
+        name : str, optional
             Path where to save the sensitivities, e.g., 'MOX3600_sens.xlsx'.
             The default value is 'Sensitivity.xlsx'.
-        sort: bool, optional
+        sort : bool, optional
             Sort by absolute sensitivities. The default value is 'True'.
         """  
    
@@ -712,96 +718,102 @@ class Sensitivity():
 
     """
 
-    def __init__(self):
-        self._functional = None
-        self._zam = None
-        self._reaction = None
-        self._sensitivity = None
-        self._uncertainty = None
-        self._group_structure = []
-        self._sensitivity_vector = []
-        self._uncertainties = None
+    def __init__(self) -> None:
+        self._functional: Optional[str] = None
+        self._zam: Optional[int] = None
+        self._reaction: Optional[int] = None
+        self._sensitivity: Optional[float] = None
+        self._uncertainty: Optional[float] = None
+        self._group_structure: Sequence[float] = []
+        self._sensitivity_vector: Sequence[float] = []
+        self._uncertainties: Optional[Sequence[float]] = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.functional!r}, {self.zam!r}, {self.reaction!r}, {(len(self.group_structure)-1)!r})")
 
     @property
-    def functional(self):
+    def functional(self) -> str | None:
         return self._functional
     
     @functional.setter
-    def functional(self, functional):
+    def functional(self, functional: str) -> None:
         self._functional = functional
 
     @property
-    def zam(self):
+    def zam(self) -> int | None:
         return self._zam
 
     @zam.setter
-    def zam(self, zam):
+    def zam(self, zam: int) -> None:
         self._zam = zam
 
     @property
-    def reaction(self):
+    def reaction(self) -> int | None:
         return self._reaction
 
     @reaction.setter
-    def reaction(self, reaction):
+    def reaction(self, reaction: int) -> None:
         self._reaction = reaction
 
     @property
-    def sensitivity(self):
+    def sensitivity(self) -> float | None:
         return self._sensitivity
 
     @sensitivity.setter
-    def sensitivity(self, sensitivity):
+    def sensitivity(self, sensitivity: float) -> None:
         self._sensitivity = sensitivity        
 
     @property
-    def uncertainty(self):
+    def uncertainty(self) -> float | None:
         return self._uncertainty
 
     @uncertainty.setter
-    def uncertainty(self, uncertainty):
+    def uncertainty(self, uncertainty: float) -> None:
         self._uncertainty = uncertainty    
 
     @property
-    def group_structure(self):
+    def group_structure(self) -> np.ndarray:
         return self._group_structure
 
     @group_structure.setter
-    def group_structure(self, group_structure):
+    def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
         if group_number >=2 &  group_number <= 1501:
-            self._group_structure = group_structure
+            self._group_structure = np.array(group_structure)
         else:
             raise ValueError(f'The number of group must be between 1 and 1500 due to NJOY limitations, \
                              but {group_number-1} is provided')
 
     @property
-    def sensitivity_vector(self):
+    def sensitivity_vector(self) -> np.ndarray:
         return self._sensitivity_vector
 
     @sensitivity_vector.setter
-    def sensitivity_vector(self, sensitivity_vector):
+    def sensitivity_vector(self, sensitivity_vector: Sequence[float]) -> None:
         self._sensitivity_vector = np.array(sensitivity_vector) 
 
     @property
-    def uncertainty_vector(self):
+    def uncertainty_vector(self) -> np.ndarray:
         return self._uncertainty_vector
 
     @uncertainty_vector.setter
-    def uncertainty_vector(self, uncertainty_vector):
+    def uncertainty_vector(self, uncertainty_vector: Sequence[float]) -> None:
         self._uncertainty_vector = np.array(uncertainty_vector) 
 
-    def from_serpent(self, file):
+    def from_serpent(self, file: str) -> Sensitivity:
         """Export sensitivity data of a single reaction from a Serpent output 
         file (_sens0.m) to the Sensitivity instance.
 
         Parameters
         ----------
-        file: str
+        file : str
             Path to the Serpent output, e.g., './MOX3600_sens0.m'.
+
+        Returns
+        ------
+        Sensitivity
+            Sensitivity for given functional, zam, and reaction provided
+            in the instance
 
         Notes
         -----
@@ -817,15 +829,21 @@ class Sensitivity():
 
         return next(sensitivity for sensitivity in sensitivities if (sensitivity.functional == self.functional) & (sensitivity.zam == self.zam) & (sensitivity.reaction == self.reaction))
 
-    def from_scale(self, file):
+    def from_scale(self, file: str) -> Sensitivity:
         """Export sensitivity data of a single reaction from a SCALE output 
         file (.sdf) to the Sensitivity instance.
 
         Parameters
         ----------
-        file: str
+        file : str
             Relative path to the SCALE output, e.g., './MET1000.sdf'.
        
+        Returns
+        ------
+        Sensitivity
+            Sensitivity for given functional, zam, and reaction provided
+            in the instance
+
         Notes
         -----
         This method is not intended for multiple calls for creating
