@@ -102,7 +102,7 @@ class Serpent():
 
         Parameters
         ----------
-        s: str
+        s : str
             Path to a _sens0.m file
         
         Returns

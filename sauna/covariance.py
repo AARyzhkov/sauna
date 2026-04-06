@@ -110,7 +110,7 @@ class Covariances():
 
         Return
         ------
-        covs_in_file: list
+        covs_in_file : list
             List of Covariance instances in an ENDF-6 file.
 
         """
@@ -1117,7 +1117,7 @@ class Covariances():
         print(f'The number of matrices with over 100% values is {number_of_matrices} of a total number of {len(self.covariances)} matrices.')
         print('-------------------------------------------')
 
-    def get_by_zam(self, zam: int) -> np.array:
+    def get_by_zam(self, zam: int) -> np.ndarray:
         """Get a list of Covariance instances by a ZAM value
         from a Covariances instance.
 
@@ -1144,7 +1144,7 @@ class Covariances():
 
         return array
 
-    def get_by_reaction(self, mt: int) -> np.array:
+    def get_by_reaction(self, mt: int) -> np.ndarray:
         """Get a list of Covariance instances by a MT value
         from a Covariances instance.
 

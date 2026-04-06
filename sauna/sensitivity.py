@@ -474,7 +474,7 @@ class Sensitivities():
 
         Parameters
         ----------
-        file: str
+        file : str
             Path to the Serpent output, e.g., './MOX3600_sens0.m'.
 
         """  
@@ -634,15 +634,17 @@ class Sensitivities():
 
         Parameters
         ----------
-        name: functional
+        name : functional
             Name of the functional
-        sort: bool, optional
+        sort : bool, optional
             Sort by absolute sensitivities. The default value is
             True.       
 
         Returns
         -------
-        sensitivity_df : pandas.DataFrame
+        pandas.DataFrame
+            Dataframe containing integral sensitivities for a requested
+            functional
         
         """ 
 
@@ -670,10 +672,10 @@ class Sensitivities():
 
         Parameters
         ----------
-        name: str, optional
+        name : str, optional
             Path where to save the sensitivities, e.g., 'MOX3600_sens.xlsx'.
             The default value is 'Sensitivity.xlsx'.
-        sort: bool, optional
+        sort : bool, optional
             Sort by absolute sensitivities. The default value is 'True'.
         """  
    
@@ -804,8 +806,14 @@ class Sensitivity():
 
         Parameters
         ----------
-        file: str
+        file : str
             Path to the Serpent output, e.g., './MOX3600_sens0.m'.
+
+        Returns
+        ------
+        Sensitivity
+            Sensitivity for given functional, zam, and reaction provided
+            in the instance
 
         Notes
         -----
@@ -827,9 +835,15 @@ class Sensitivity():
 
         Parameters
         ----------
-        file: str
+        file : str
             Relative path to the SCALE output, e.g., './MET1000.sdf'.
        
+        Returns
+        ------
+        Sensitivity
+            Sensitivity for given functional, zam, and reaction provided
+            in the instance
+
         Notes
         -----
         This method is not intended for multiple calls for creating

@@ -45,7 +45,7 @@ def fix_endf(text: str) -> str:
     Returns
     -------
     str
-        The fixed an ENDF-6 file as string
+        A fixed ENDF-6 file as string
 
     """
 
@@ -67,7 +67,7 @@ def get_zam(tape: sandy.Endf6) -> int:  # type: ignore[name-defined]
      
     Parameters
     ----------
-    tape: sandy.Endf6
+    tape : sandy.Endf6
         An ENDF-6 tape before processing
 
     Returns
@@ -101,7 +101,7 @@ def process_file(
      
     Parameters
     ----------
-    tape: sandy.Endf6
+    tape : sandy.Endf6
         An ENDF-6 tape to process
     library : str, optional
         The argument defines how the method interacts with peculiarities of
@@ -115,10 +115,6 @@ def process_file(
     -------
     sandy.endf.errorr
        Processed from an ENDF-6 file tape
-
-    Notes
-    -----
-    Not provided
 
     """   
 
@@ -188,7 +184,7 @@ def process_file(
     return errorr
 
 
-def cov_to_corr(array_of_covariances: Sequence[float]) -> Sequence[float]:
+def cov_to_corr(array_of_covariances: Sequence[float]) -> np.ndarray:
     """Generate a correlation matrix from a symmetric covariance matrix.
 
     Parameters
@@ -237,7 +233,7 @@ def corr_to_cov(
     return covariances
 
 
-def fix_corrs(cov: Covariance, eps: float = 1e-5) -> Sequence[float]:  # type: ignore[name-defined]
+def fix_corrs(cov: Covariance, eps: float = 1e-5) -> np.ndarray:  # type: ignore[name-defined]
     """Make sure that a symmetric covariance matrix does
     not have non-mathematical correlations.
 

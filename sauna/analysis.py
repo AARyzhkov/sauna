@@ -30,7 +30,7 @@ class Analysis():
         
         Parameters
         ----------
-        covariance: float
+        covariance : float
             Covariance between two values
         
         Returns
@@ -54,7 +54,7 @@ class Analysis():
         
         Parameters
         ----------
-        uncertainty: float
+        uncertainty : float
             Uncertainty between two values
         
         Returns
@@ -85,15 +85,15 @@ class Analysis():
 
         Parameters
         ----------
-        vec_1: Sequence[float]
+        vec_1 : iterable of float
             The first sensitivity vector
-        std_1: Sequence[float]
+        std_1 : iterable of float
             Statistical uncertainty of the first sensitivity vector
-        cov_matrix: Sequence[float]
+        cov_matrix : iterable of float
             Covariance matrix 
-        vec_2: Sequence[float]
+        vec_2 : iterable of float
             The second sensitivity vector
-        std_2: Sequence[float]
+        std_2 : iterable of float
             Statistical uncertainty of the second sensitivity vector
 
         Returns
@@ -128,15 +128,15 @@ class Analysis():
 
         Parameters
         ----------
-        sensitivity_1: float
+        sensitivity_1 : float
             The first sensitivity value
-        std_1: float
+        std_1 : float
             Statistical uncertainty of the first sensitivity value
-        covariance: float
+        covariance : float
             Covariance value 
-        sensitivity_2: float
+        sensitivity_2 : float
             The second sensitivity value
-        std_2: float
+        std_2 : float
             Statistical uncertainty of the second sensitivity value
 
         Returns
@@ -237,7 +237,7 @@ class Analysis():
             Covariances instance to use for similarity assessment;
             it must be specified if only the c_k type of similarity
             is calculated, otherwise it is not used.
-        reactions: Sequence[int], optional
+        reactions : iterable of int, optional
             List of MT numbers to take into account for similarity assessment.
             None is default and accounts for all the reactions. This argument
             dictates to take only certain MT numbers. It is currently
@@ -435,7 +435,7 @@ class Analysis():
             Covariances instance
         save_to : str, optional
             Path to save the breakdown
-        by_total: bool, optional
+        by_total : bool, optional
             Whether to compute the uncertainty by total cross section. 
             The default value is False.
 
@@ -587,7 +587,7 @@ class Analysis():
             Covariances instance
         save_to : str, optional
             Path to save the breakdown
-        by_total: bool, optional
+        by_total : bool, optional
             Whether to compute the uncertainty by total cross section. 
             The default value is False.
 
@@ -810,23 +810,23 @@ class Analysis():
             Uncertainty in the concentration: 68% of the confidence interval
             for the 'normal' distribution or 1/2 of the range of the 
             'uniform' and 'triangular' distributions.
-        targets: iterable of int
+        targets : iterable of int
             ZAM values for the nuclide whose uncertainty
             is provided in the uncertainty parameter.
-        background_zams: iterable of int
+        background_zams : iterable of int
             Nuclides to be considered in the calculation, excluding the target nuclide. 
             Make sure that correct nuclides (ZAMs) for the region, where the influence
             of uncertainties in concentrations is assessed. For example, ZAMs
             for cladding must not be provided if the Pu239 fraction uncertainty
             influence in the HM fuel composition is of interest. 
-        fraction: float
+        fraction : float
             Fraction of the target nuclide among the nuclides parameter.
-        fraction_type: str, optional
+        fraction_type : str, optional
             Type of the fraction which the uncertainty is calculated for.
             It supports only the atomic fraction 'ao', which is the same for
             concentrations, and the weight fraction 'wo'. The default
             value is 'ao'.
-        uncertainty_type: str, optional
+        uncertainty_type : str, optional
             Type of the uncertainty distribution. It is assumed as
             one of the following {'normal', 'uniform', 'triangular'}.
             The default value is 'normal'.
@@ -907,11 +907,11 @@ class Analysis():
             Uncertainty in the concentration: 68% of the confidence interval
             for the 'normal' distribution or 1/2 of the range of the 
             'uniform' or 'triangular' distributions
-        targets: iterable of int
+        targets : iterable of int
             ZAM values for the nuclide whose uncertainty
             is provided in the uncertainty parameter. Make sure the
             target nuclides are located in the volume of interest
-        uncertainty_type: str, optional
+        uncertainty_type : str, optional
             Type of the uncertainty distribution. It is assumed as
             one of the following {'normal', 'uniform', 'triangular'}.
             The default value is 'normal'.
@@ -1157,10 +1157,10 @@ class Analysis():
             is multiplied with cost_type to get the total cost in the TAR exercise.
             The default value is None, meaning there is no energy dependence of the
             cost function.
-        maxiter: int, optional
+        maxiter : int, optional
             Number of maximum iterations to be passed to the SciPy optimizer. The default
             value is 1000.
-        tol: float, optional
+        tol : float, optional
             Tolerance value to be passed to the SciPy optimizer. The default value is
             1e-5.
             
@@ -1348,7 +1348,7 @@ class Analysis():
                     cor         = np.divide(matrix, base_outer, out = np.zeros_like(matrix), where = base_outer != 0 )
                     new_outer   = np.outer(first_new, second_new)
                     new_cov_mat = cor * new_outer   
-                    sandwich: float = sens_1.sensitivity_vector @ new_cov_mat @ sens_2.sensitivity_vector
+                    sandwich = sens_1.sensitivity_vector @ new_cov_mat @ sens_2.sensitivity_vector
                     variance +=  symm_coef * sandwich
 
             print(f'Model {model_index} {functional}:', np.sqrt(variance).real)
