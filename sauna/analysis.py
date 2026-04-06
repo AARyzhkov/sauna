@@ -726,7 +726,7 @@ class Analysis():
                 
                 total_row = pd.DataFrame([total_row])
                 
-                # # Sort the uncertainties by its absolute values
+                # Sort the uncertainties by its absolute values
                 uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)       
                 dataframes[functional] = pd.concat([total_row, uncertainty_df.iloc[:]]).reset_index(drop=True)
         else:
