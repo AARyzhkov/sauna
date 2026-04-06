@@ -453,7 +453,7 @@ class Analysis():
         """
 
         # Create a dictionary of dataframes for different functionals
-        dataframes: dict[str, pd.DataFrame] = {}
+        dataframes = {}
 
         # Populate the uncertainty dataframe for each nuclide and reaction
         # Get necessary functionals from sensitivities
@@ -489,7 +489,7 @@ class Analysis():
                                 uncertainty, std = uncertainty*np.sqrt(2), std*np.sqrt(2)
 
                             # Create a new row to append it to the dataframe
-                            new_row: dict = {'Nuclide 1'      : f'{sensitivity_1.zam}',
+                            new_row   = {'Nuclide 1'      : f'{sensitivity_1.zam}',
                                          'Reaction 1'     : f'MT{sensitivity_1.reaction}',
                                          'Nuclide 2'      : f'{sensitivity_2.zam}',
                                          'Reaction 2'     : f'MT{sensitivity_2.reaction}',
@@ -516,11 +516,11 @@ class Analysis():
 
                             # Create a new row to append it to the dataframe
                             new_row = {'Nuclide 1'      : f'{sensitivity_1.zam}',
-                                         'Reaction 1'     : f'MT{sensitivity_1.reaction}',
-                                         'Nuclide 2'      : f'{sensitivity_2.zam}',
-                                         'Reaction 2'     : f'MT{sensitivity_2.reaction}',
-                                         'Uncertainty [%]': uncertainty * 100,
-                                         'Statistical Uncertainty [%]' : std * 100}   
+                                       'Reaction 1'     : f'MT{sensitivity_1.reaction}',
+                                       'Nuclide 2'      : f'{sensitivity_2.zam}',
+                                       'Reaction 2'     : f'MT{sensitivity_2.reaction}',
+                                       'Uncertainty [%]': uncertainty * 100,
+                                       'Statistical Uncertainty [%]' : std * 100}   
 
                             # Populate the uncertainty dataframe for each reaction
                             uncertainty_df.loc[len(uncertainty_df)] = new_row
@@ -532,11 +532,11 @@ class Analysis():
 
                         # Create a new row to append it to the dataframe
                         new_row = {'Nuclide 1'      : f'{sensitivity_1.zam}',
-                                     'Reaction 1'     : f'MT{sensitivity_1.reaction}',
-                                     'Nuclide 2'      : f'{sensitivity_2.zam}',
-                                     'Reaction 2'     : f'MT{sensitivity_2.reaction}',
-                                     'Uncertainty [%]': uncertainty * 100,
-                                     'Statistical Uncertainty [%]' : std * 100}   
+                                   'Reaction 1'     : f'MT{sensitivity_1.reaction}',
+                                   'Nuclide 2'      : f'{sensitivity_2.zam}',
+                                   'Reaction 2'     : f'MT{sensitivity_2.reaction}',
+                                   'Uncertainty [%]': uncertainty * 100,
+                                   'Statistical Uncertainty [%]' : std * 100}   
 
                         # Populate the uncertainty dataframe for each reaction
                         uncertainty_df.loc[len(uncertainty_df)] = new_row
@@ -562,10 +562,10 @@ class Analysis():
                 name = save_to
                 if os.path.exists(name):
                     with pd.ExcelWriter(name, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:  
-                        uncertainty_df.to_excel(writer, sheet_name = functional)
+                        dataframes[functional].to_excel(writer, sheet_name = functional)
                 else:
                     with pd.ExcelWriter(name, engine='openpyxl', mode='w') as writer:
-                        uncertainty_df.to_excel(writer, sheet_name = functional) 
+                        dataframes[functional].to_excel(writer, sheet_name = functional) 
 
         return dataframes
 
