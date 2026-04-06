@@ -551,11 +551,10 @@ class Analysis():
                          'Reaction 2'  : 'total',
                          'Uncertainty [%]' : total_uncertainty,
                          'Statistical Uncertainty [%]' : stat_uncertainty}   
-            uncertainty_df.loc[len(uncertainty_df)] = total_row
 
             # Sort the uncertainties by its absolute values
             uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)       
-            dataframes[functional] = uncertainty_df
+            dataframes[functional] = pd.concat([pd.DataFrame([total_row]), uncertainty_df], ignore_index=True)
         
             # Export to Excel
             if save_to != None:
@@ -724,11 +723,9 @@ class Analysis():
                             'Uncertainty [%]' : total_uncertainty,
                             'Statistical Uncertainty [%]' : stat_uncertainty} 
                 
-                total_row = pd.DataFrame([total_row])
-                
                 # Sort the uncertainties by its absolute values
-                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)       
-                dataframes[functional] = pd.concat([total_row, uncertainty_df.iloc[:]]).reset_index(drop=True)
+                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)   
+                dataframes[functional] = pd.concat([pd.DataFrame([total_row]), uncertainty_df], ignore_index=True)
         else:
             for functional in sensitivities.functionals:
                 rows = []
@@ -770,11 +767,9 @@ class Analysis():
                             'Uncertainty [%]' : total_uncertainty,
                             'Statistical Uncertainty [%]' : stat_uncertainty} 
                 
-                total_row = pd.DataFrame([total_row])
-
                 # Sort the uncertainties by its absolute values
-                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)       
-                dataframes[functional] = pd.concat([total_row, uncertainty_df.iloc[:]]).reset_index(drop=True)
+                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)   
+                dataframes[functional] = pd.concat([pd.DataFrame([total_row]), uncertainty_df], ignore_index=True)
 
         # Export to Excel
         if save_to != None:
