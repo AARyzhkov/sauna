@@ -835,7 +835,7 @@ class Analysis():
   
         """
 
-        nuclides: list[int] = background_zams
+        nuclides = background_zams
 
         # Make sure that target values are not included in the nuclides list
         for target in targets:
@@ -847,17 +847,17 @@ class Analysis():
 
         for functional in sensitivities.functionals:
             
-            unconstrained_sensitivity: float = 0
+            unconstrained_sensitivity = 0.
             for target in targets:
                 unconstrained_sensitivity += sensitivities.get_by_params(functional, target, 1).sensitivity
 
-            constrainer: float = 0
+            constrainer = 0.
             for nuclide in nuclides:
                 constrainer += sensitivities.get_by_params(functional, nuclide, 1).sensitivity
 
             # Get constrained sensitivities:
             if fraction_type == 'ao':
-                constrained_sensitivity = unconstrained_sensitivity - fraction/(1-fraction)*constrainer
+                constrained_sensitivity = unconstrained_sensitivity - fraction / (1 - fraction)*constrainer
                 concentration_uncertainty = np.abs(constrained_sensitivity * uncertainty)
                 concentration_uncertainties[functional] = concentration_uncertainty
             elif fraction_type == 'wo':
@@ -923,7 +923,7 @@ class Analysis():
         uncertainties = {}
 
         for functional in sensitivities.functionals:
-            sensitivity: float = 0
+            sensitivity = 0.
             for target in targets:
                 sensitivity += sensitivities.get_by_params(functional, target, 1).sensitivity
             
