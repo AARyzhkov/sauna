@@ -453,7 +453,7 @@ class Analysis():
         """
 
         # Create a dictionary of dataframes for different functionals
-        dataframes: dict[str, pd.DataFrame] = {}
+        dataframes = {}
 
         # Populate the uncertainty dataframe for each nuclide and reaction
         # Get necessary functionals from sensitivities
@@ -489,7 +489,7 @@ class Analysis():
                                 uncertainty, std = uncertainty*np.sqrt(2), std*np.sqrt(2)
 
                             # Create a new row to append it to the dataframe
-                            new_row: dict = {'Nuclide 1'      : f'{sensitivity_1.zam}',
+                            new_row   = {'Nuclide 1'      : f'{sensitivity_1.zam}',
                                          'Reaction 1'     : f'MT{sensitivity_1.reaction}',
                                          'Nuclide 2'      : f'{sensitivity_2.zam}',
                                          'Reaction 2'     : f'MT{sensitivity_2.reaction}',
@@ -516,11 +516,11 @@ class Analysis():
 
                             # Create a new row to append it to the dataframe
                             new_row = {'Nuclide 1'      : f'{sensitivity_1.zam}',
-                                         'Reaction 1'     : f'MT{sensitivity_1.reaction}',
-                                         'Nuclide 2'      : f'{sensitivity_2.zam}',
-                                         'Reaction 2'     : f'MT{sensitivity_2.reaction}',
-                                         'Uncertainty [%]': uncertainty * 100,
-                                         'Statistical Uncertainty [%]' : std * 100}   
+                                       'Reaction 1'     : f'MT{sensitivity_1.reaction}',
+                                       'Nuclide 2'      : f'{sensitivity_2.zam}',
+                                       'Reaction 2'     : f'MT{sensitivity_2.reaction}',
+                                       'Uncertainty [%]': uncertainty * 100,
+                                       'Statistical Uncertainty [%]' : std * 100}   
 
                             # Populate the uncertainty dataframe for each reaction
                             uncertainty_df.loc[len(uncertainty_df)] = new_row
@@ -532,11 +532,11 @@ class Analysis():
 
                         # Create a new row to append it to the dataframe
                         new_row = {'Nuclide 1'      : f'{sensitivity_1.zam}',
-                                     'Reaction 1'     : f'MT{sensitivity_1.reaction}',
-                                     'Nuclide 2'      : f'{sensitivity_2.zam}',
-                                     'Reaction 2'     : f'MT{sensitivity_2.reaction}',
-                                     'Uncertainty [%]': uncertainty * 100,
-                                     'Statistical Uncertainty [%]' : std * 100}   
+                                   'Reaction 1'     : f'MT{sensitivity_1.reaction}',
+                                   'Nuclide 2'      : f'{sensitivity_2.zam}',
+                                   'Reaction 2'     : f'MT{sensitivity_2.reaction}',
+                                   'Uncertainty [%]': uncertainty * 100,
+                                   'Statistical Uncertainty [%]' : std * 100}   
 
                         # Populate the uncertainty dataframe for each reaction
                         uncertainty_df.loc[len(uncertainty_df)] = new_row
@@ -551,21 +551,20 @@ class Analysis():
                          'Reaction 2'  : 'total',
                          'Uncertainty [%]' : total_uncertainty,
                          'Statistical Uncertainty [%]' : stat_uncertainty}   
-            uncertainty_df.loc[len(uncertainty_df)] = total_row
 
             # Sort the uncertainties by its absolute values
             uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)       
-            dataframes[functional] = uncertainty_df
+            dataframes[functional] = pd.concat([pd.DataFrame([total_row]), uncertainty_df], ignore_index=True)
         
             # Export to Excel
             if save_to != None:
                 name = save_to
                 if os.path.exists(name):
                     with pd.ExcelWriter(name, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:  
-                        uncertainty_df.to_excel(writer, sheet_name = functional)
+                        dataframes[functional].to_excel(writer, sheet_name = functional)
                 else:
                     with pd.ExcelWriter(name, engine='openpyxl', mode='w') as writer:
-                        uncertainty_df.to_excel(writer, sheet_name = functional) 
+                        dataframes[functional].to_excel(writer, sheet_name = functional) 
 
         return dataframes
 
@@ -724,11 +723,9 @@ class Analysis():
                             'Uncertainty [%]' : total_uncertainty,
                             'Statistical Uncertainty [%]' : stat_uncertainty} 
                 
-                total_row = pd.DataFrame([total_row])
-                
                 # Sort the uncertainties by its absolute values
-                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)       
-                dataframes[functional] = pd.concat([total_row, uncertainty_df.iloc[:]]).reset_index(drop=True)
+                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)   
+                dataframes[functional] = pd.concat([pd.DataFrame([total_row]), uncertainty_df], ignore_index=True)
         else:
             for functional in sensitivities.functionals:
                 rows = []
@@ -770,11 +767,9 @@ class Analysis():
                             'Uncertainty [%]' : total_uncertainty,
                             'Statistical Uncertainty [%]' : stat_uncertainty} 
                 
-                total_row = pd.DataFrame([total_row])
-
                 # Sort the uncertainties by its absolute values
-                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)       
-                dataframes[functional] = pd.concat([total_row, uncertainty_df.iloc[:]]).reset_index(drop=True)
+                uncertainty_df = uncertainty_df.reindex(uncertainty_df['Uncertainty [%]'].abs().sort_values(ascending=False).index).reset_index(drop=True)   
+                dataframes[functional] = pd.concat([pd.DataFrame([total_row]), uncertainty_df], ignore_index=True)
 
         # Export to Excel
         if save_to != None:
@@ -840,7 +835,7 @@ class Analysis():
   
         """
 
-        nuclides: list[int] = background_zams
+        nuclides = background_zams
 
         # Make sure that target values are not included in the nuclides list
         for target in targets:
@@ -852,17 +847,17 @@ class Analysis():
 
         for functional in sensitivities.functionals:
             
-            unconstrained_sensitivity: float = 0
+            unconstrained_sensitivity = 0.
             for target in targets:
                 unconstrained_sensitivity += sensitivities.get_by_params(functional, target, 1).sensitivity
 
-            constrainer: float = 0
+            constrainer = 0.
             for nuclide in nuclides:
                 constrainer += sensitivities.get_by_params(functional, nuclide, 1).sensitivity
 
             # Get constrained sensitivities:
             if fraction_type == 'ao':
-                constrained_sensitivity = unconstrained_sensitivity - fraction/(1-fraction)*constrainer
+                constrained_sensitivity = unconstrained_sensitivity - fraction / (1 - fraction)*constrainer
                 concentration_uncertainty = np.abs(constrained_sensitivity * uncertainty)
                 concentration_uncertainties[functional] = concentration_uncertainty
             elif fraction_type == 'wo':
@@ -928,7 +923,7 @@ class Analysis():
         uncertainties = {}
 
         for functional in sensitivities.functionals:
-            sensitivity: float = 0
+            sensitivity = 0.
             for target in targets:
                 sensitivity += sensitivities.get_by_params(functional, target, 1).sensitivity
             
