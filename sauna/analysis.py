@@ -1103,7 +1103,7 @@ class Analysis():
         energy_costs: Optional[Sequence[float]] = None,
         maxiter: int = 1000,
         tol: float = 1e-5,
-        verbose = True
+        verbose: bool = True
     ) -> Covariances:
         """Calculate target accuracy requirements based upon
         a Sensitivities instance, a Covariances instance
