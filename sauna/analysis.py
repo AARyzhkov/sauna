@@ -1103,6 +1103,7 @@ class Analysis():
         energy_costs: Optional[Sequence[float]] = None,
         maxiter: int = 1000,
         tol: float = 1e-5,
+        verbose = True
     ) -> Covariances:
         """Calculate target accuracy requirements based upon
         a Sensitivities instance, a Covariances instance
@@ -1345,8 +1346,8 @@ class Analysis():
                     new_cov_mat = cor * new_outer   
                     sandwich = sens_1.sensitivity_vector @ new_cov_mat @ sens_2.sensitivity_vector
                     variance +=  symm_coef * sandwich
-
-            print(f'Model {model_index} {functional}:', np.sqrt(variance).real)
+            if verbose:
+                print(f'Model {model_index} {functional}:', np.sqrt(variance).real)
             return variance
 
         ######################
