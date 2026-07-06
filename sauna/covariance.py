@@ -79,11 +79,11 @@ class Covariances():
     
     @group_structure.setter
     def group_structure(self, group_structure: Sequence[float]) -> None:
-        group_number = len(group_structure)
-        if (group_number >= 2) & (group_number <= 1501):
+        group_number = len(group_structure) - 1
+        if (group_number >= 1) & (group_number <= 1500):
             self._group_structure = np.array(group_structure)
         else:
-            raise ValueError(f'The number of group must be between 1 and 1500, but {group_number-1} is provided')
+            raise ValueError(f'The number of group must be between 1 and 1500, but {group_number} is provided')
 
     @property
     def covariances(self) -> list[Covariance]:
