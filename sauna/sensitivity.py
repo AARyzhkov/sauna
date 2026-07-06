@@ -95,7 +95,7 @@ class Sensitivities():
     @group_structure.setter
     def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
-        if group_number >=2 &  group_number <= 1501:
+        if (group_number >= 2) & (group_number <= 1501):
             self._group_structure = np.array(group_structure)
         else:
             raise ValueError(f'The number of group must be between 1 and 1500 due to the NJOY limitations, \
@@ -778,7 +778,7 @@ class Sensitivity():
     @group_structure.setter
     def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
-        if group_number >=2 &  group_number <= 1501:
+        if (group_number >= 2) & (group_number <= 1501):
             self._group_structure = np.array(group_structure)
         else:
             raise ValueError(f'The number of group must be between 1 and 1500 due to NJOY limitations, \

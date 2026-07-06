@@ -80,7 +80,7 @@ class Covariances():
     @group_structure.setter
     def group_structure(self, group_structure: Sequence[float]) -> None:
         group_number = len(group_structure)
-        if group_number >=2 &  group_number <= 1501:
+        if (group_number >= 2) & (group_number <= 1501):
             self._group_structure = np.array(group_structure)
         else:
             raise ValueError(f'The number of group must be between 1 and 1500, but {group_number-1} is provided')
@@ -514,11 +514,11 @@ class Covariances():
         covariance.dataframe = pd.read_excel(file).fillna(0)
 
         # Set the MF number based upon the MT number
-        if first_mt == 251:
+        if covariance.reaction_1 == 251:
             covariance.mf = 34
-        elif (first_mt == 452) | (first_mt == 455) | (first_mt == 456):
+        elif (covariance.reaction_1 == 452) | (covariance.reaction_1 == 455) | (covariance.reaction_1 == 456):
             covariance.mf = 31
-        elif (first_mt == 1018):
+        elif (covariance.reaction_1 == 1018):
             covariance.mf = 35
         else:
             covariance.mf = 33

@@ -502,7 +502,7 @@ class Analysis():
                         # Account delayed neutron fraction if present for beta-eff and lambda-eff
                         # with no prompt data since they can be accounted whether via both prompt or total
                         # nu-fission, and the second one is taken here
-                        elif (('beta-eff' in functional) | ('lambda-eff' in functional)) & (first_mt == 455 | second_mt == 455) & (first_mt != 456 | second_mt != 456):
+                        elif (('beta-eff' in functional) | ('lambda-eff' in functional)) & ((first_mt == 455) | (second_mt == 455)) & ((first_mt != 456) | (second_mt != 456)):
                             # Get Sensitivity instances for the corresponding covariance matrix
                             sensitivity_1 = sensitivities.get_by_params(functional, zam_1, first_mt)
                             sensitivity_2 = sensitivities.get_by_params(functional, zam_2, second_mt)
@@ -693,7 +693,7 @@ class Analysis():
                                 is_nu_t = (first_mt != 455) & (first_mt != 456) & (second_mt != 455) & (second_mt != 456)
                                 if is_nu_t: 
                                     rows.extend(get_rows(functional, zam_1, zam_2, first_mt, second_mt)) 
-                                elif (first_mt == 455 | second_mt == 455) & (first_mt != 456 | second_mt != 456): 
+                                elif ((first_mt == 455) | (second_mt == 455)) & ((first_mt != 456) | (second_mt != 456)): 
                                     rows.extend(get_rows(functional, zam_1, zam_2, first_mt, second_mt))   
                 else:
                     for zam in sensitivities.zams:
