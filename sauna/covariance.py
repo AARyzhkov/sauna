@@ -1074,12 +1074,12 @@ class Covariances():
 
             else:
                 cov_1 = self.get_by_params(cov.zam_1, cov.zam_1, cov.reaction_1, cov.reaction_1)
-                diag_1 = np.sqrt(np.diag(cov_1.dataframe.to_numpy()))
+                stds_1 = np.sqrt(np.diag(cov_1.dataframe.to_numpy()))
 
                 cov_2 = self.get_by_params(cov.zam_2, cov.zam_2, cov.reaction_2, cov.reaction_2)
-                diag_2 = np.sqrt(np.diag(cov_2.dataframe.to_numpy()))
+                stds_2 = np.sqrt(np.diag(cov_2.dataframe.to_numpy()))
                 
-                outer  = np.outer(diag_1, diag_2)
+                outer  = np.outer(stds_1, stds_2)
                     
                 array_of_covs = cov.dataframe.to_numpy()
                 corr = np.divide(array_of_covs, outer,
@@ -1106,37 +1106,36 @@ class Covariances():
         """       
 
         number_of_matrices = 0
-        text_file = open(f'{self.library}-limited.txt', "a+")
+        log_path = pathlib.Path(f'{self.library}-limited.txt')
 
-        for cov in self.covariances:
-            if cov.reaction_1 == cov.reaction_2:
-                # Get the covs for given zam if reaction_1 is not equal to reaction_2
-                zam_covs = [i for i in self.get_by_zam(cov.zam_1) if i.reaction_1 != i.reaction_2]
+        with open(log_path, "a+") as text_file:
+            for cov in self.covariances:
+                if (cov.zam_1 == cov.zam_2) & (cov.reaction_1 == cov.reaction_2):
+                    # Get the covs for given zam if reaction_1 is not equal to reaction_2
+                    asym_covs = [i for i in self.get_by_zam(cov.zam_1) if (i.zam_1 != i.zam_2) | (i.reaction_1 != i.reaction_2)]
 
-                # Get the indices where the values are incorrect
-                array_of_covs = cov.dataframe.to_numpy()
-                diag = np.sqrt(np.diag(array_of_covs))
-                incorrect_indices = np.where(diag > 1)[0]
+                    # Get the indices where the values are incorrect
+                    array_of_covs = cov.dataframe.to_numpy()
+                    stds = np.sqrt(np.diag(array_of_covs))
+                    incorrect_indices = np.where(stds > 1)[0]
 
-                # Fix data for incorrect indices
-                if len(incorrect_indices) > 0:
-                    number_of_matrices += 1
-                    text_file.write(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} has been fixed. \n')
+                    # Fix data for incorrect indices
+                    if len(incorrect_indices) > 0:
+                        number_of_matrices += 1
+                        text_file.write(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} has been fixed. \n')
 
-                    for i in incorrect_indices:
-                        # Firstly, fix covariances when the reactions are not the same
-                        for zam_cov in zam_covs:
-                            if zam_cov.reaction_1 == cov.reaction_1:
-                                zam_cov.dataframe.values[i,:] /= diag[i]  
-                            elif zam_cov.reaction_2 == cov.reaction_1:
-                                zam_cov.dataframe.values[:,i] /= diag[i]  
+                        for i in incorrect_indices:
+                            # Firstly, fix covariances when the reactions are not the same
+                            for asym_cov in asym_covs:
+                                if (asym_cov.zam_1 == cov.zam_1) & (asym_cov.reaction_1 == cov.reaction_1):
+                                    asym_cov.dataframe.iloc[i,:] /= stds[i]  
+                                elif (asym_cov.zam_2 == cov.zam_1) & (asym_cov.reaction_2 == cov.reaction_1):
+                                    asym_cov.dataframe.iloc[:,i] /= stds[i]  
 
-                        # Secondly fix covariances when the reactions are the same
-                        array_of_covs[i,:] /= diag[i]
-                        array_of_covs[:,i] /= diag[i]
-                        cov.dataframe.values[:,:] = array_of_covs
-
-        text_file.close()
+                            # Secondly fix covariances when the reactions are the same
+                            array_of_covs[i,:] /= stds[i]
+                            array_of_covs[:,i] /= stds[i]
+                            cov.dataframe[:] = array_of_covs
 
         print('-------------------------------------------')
         print(f'The number of matrices with over 100% values is {number_of_matrices} of a total number of {len(self.covariances)} matrices.')
