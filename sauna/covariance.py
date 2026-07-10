@@ -490,35 +490,37 @@ class Covariances():
         
         print('The covariances have been imported successfully.')
 
-    def from_excel(self, file: str) -> None:
+    def from_excel(self, path: str) -> None:
         """Import a covariance matrix from an .xlsx file 
         to the Covariances instance.
 
         Parameters
         ----------
         file : str
-            Path to a .xlsx 
+            Path to an .xlsx file
 
         """
 
-        fname = file.name.split('.')[0]
-        zam_1, zam_2, first_mt, second_mt = fname.split('-')
-
+        parts = pathlib.Path(path).stem.split('-')
+        if len(parts) != 4:
+            raise ValueError(f"Inorrect format {parts}. 'zam_1-zam_2-reaction_1-reaction_2' is expected.")
+        
+        zam_1, zam_2, first_mt, second_mt = map(int, parts)
         covariance = Covariance()
         covariance.library = self.library
         covariance.group_structure = self.group_structure
-        covariance.zam_1 = int(zam_1)
-        covariance.zam_2 = int(zam_2)
-        covariance.reaction_1 = int(first_mt)
-        covariance.reaction_2 = int(second_mt)
-        covariance.dataframe = pd.read_excel(file).fillna(0)
+        covariance.zam_1 = zam_1
+        covariance.zam_2 = zam_2
+        covariance.reaction_1 = first_mt
+        covariance.reaction_2 = second_mt
+        covariance.dataframe = pd.read_excel(path).fillna(0)
 
         # Set the MF number based upon the MT number
         if first_mt == 251:
             covariance.mf = 34
-        elif (first_mt == 452) | (first_mt == 455) | (first_mt == 456):
+        elif first_mt in {452, 455, 456}:
             covariance.mf = 31
-        elif (first_mt == 1018):
+        elif first_mt == 1018:
             covariance.mf = 35
         else:
             covariance.mf = 33
@@ -537,15 +539,20 @@ class Covariances():
 
         """
         
-        covtype = '.xlsx'
-        path_folder = pathlib.Path(folder).glob(f'*{covtype}')
+        path_folder = pathlib.Path(folder).glob(f'*.xlsx')
         paths = [p for p in path_folder if p.is_file()]
+
+        if not paths:
+            raise ValueError(f"There is no .xlsx file in {folder}")
         
         print('Importing covariance data from Excels.')
         for path in paths:
-            self.from_excel(path)
+            try:
+                self.from_excel(path)
+            except Exception as e:
+                print(e)
         
-        print('The covariances have been imported successfully.')
+        print(f"The {len(self.covariances)} covariances have been imported successfully.")
 
     def from_commara(self, file: str) -> None:
         """Import covariance matrices from a COMMARA file to
