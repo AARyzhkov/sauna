@@ -1052,7 +1052,7 @@ class Covariances():
         os.makedirs(save_to, exist_ok=True)
 
         for cov in self.covariances:
-            if cov.reaction_1 == cov.reaction_2:
+            if (cov.zam_1 == cov.zam_2) & (cov.reaction_1 == cov.reaction_2):
                 array_of_covs = cov.dataframe.to_numpy()
                 corr = cov_to_corr(array_of_covs)
 
@@ -1060,13 +1060,13 @@ class Covariances():
                     corr = np.where(corr >  1+eps,  1, corr)                 
                     corr = np.where(corr < -1-eps, -1, corr)
 
-            temp_df = cov.dataframe.copy()
-            temp_df[:] = corr
-
-            if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
-                temp_df.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
-            else:
-                print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
+                temp_df = cov.dataframe.copy()
+                temp_df[:] = corr
+    
+                if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
+                    temp_df.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
+                else:
+                    print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
 
         print('-------------------------------------------------')
         print('The correlations have been exported successfully.')
