@@ -1031,6 +1031,22 @@ class Covariances():
         print(f'The number of incorrect correlation matrices is {number_of_corr} of {number_of_symmetric} symmetric matrices among a total number of {len(self.covariances)} matrices')
         print('-------------------------------------------')
 
+    def _save_as_excel(self, dataframe: pd.DataFrame, path: pathlib.Path) -> None :
+        """Save dataframe to as an Excel file and checks if file exists
+        before saving to prevent accidental overwrites.
+        
+        Parameters
+        ----------
+        dataframe : pandas.DataFrame
+            Dataframe that is going to be saved as an Excel file
+        path : pathlib.Path 
+            Path to the file being created
+        """
+        if path.exists():
+            print(f"File already exists: {path.name}")
+        else:
+            dataframe.to_excel(path, index=False)
+
     def export_corrs(self, save_to: str = './correlations/', fix_corr: bool = False, eps: float = 1e-5) -> None:
         """Auxiliary method to export the correlation matrices based upon
         the covariance matrices.
@@ -1048,25 +1064,34 @@ class Covariances():
 
         """  
 
-        # Create the directory if it does not exist
-        os.makedirs(save_to, exist_ok=True)
+        save_to = pathlib.Path(save_to)
+        save_to.mkdir(parents=True, exist_ok=True)
 
         for cov in self.covariances:
             if (cov.zam_1 == cov.zam_2) & (cov.reaction_1 == cov.reaction_2):
                 array_of_covs = cov.dataframe.to_numpy()
                 corr = cov_to_corr(array_of_covs)
 
-                if fix_corr:
-                    corr = np.where(corr >  1+eps,  1, corr)                 
-                    corr = np.where(corr < -1-eps, -1, corr)
+            else:
+                cov_1 = self.get_by_params(cov.zam_1, cov.zam_1, cov.reaction_1, cov.reaction_1)
+                diag_1 = np.sqrt(np.diag(cov_1.dataframe.to_numpy()))
 
-                temp_df = cov.dataframe.copy()
-                temp_df[:] = corr
-    
-                if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
-                    temp_df.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
-                else:
-                    print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
+                cov_2 = self.get_by_params(cov.zam_2, cov.zam_2, cov.reaction_2, cov.reaction_2)
+                diag_2 = np.sqrt(np.diag(cov_2.dataframe.to_numpy()))
+                
+                outer  = np.outer(diag_1, diag_2)
+                    
+                array_of_covs = cov.dataframe.to_numpy()
+                corr = np.divide(array_of_covs, outer,
+                                    out = np.zeros_like(array_of_covs),
+                                    where = outer != 0)
+                
+            if fix_corr: corr = np.clip(corr, -1.0 - eps, 1.0 + eps)
+
+            temp_df    = cov.dataframe.copy()
+            temp_df[:] = corr
+
+            self._save_as_excel(temp_df, save_to / f"{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx")
 
         print('-------------------------------------------------')
         print('The correlations have been exported successfully.')
