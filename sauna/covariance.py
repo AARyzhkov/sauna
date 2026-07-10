@@ -1215,45 +1215,52 @@ class Covariances():
         
         return next(cov for cov in self.covariances if (cov.zam_1 == zam_1) & (cov.zam_2 == zam_2) & (cov.reaction_1 == reaction_1) & (cov.reaction_2 == reaction_2))
 
-    def to_excels(self, save_to: str = './covariances/', fix_corr: bool = False, eps: float = 1e-5) -> None:
+    def to_excels(self, save_to='./covariances/', fix_corr = False, eps = 1e-5):
         """Export covariances in the Coviariances instance
         to Excel files.
 
         Parameters
         ----------
-        save_to : str, optional
+        save_to: str, optional
             Relative path to save the processed covariances, e.g., './BROND-3.1'.
-        fix_corr : bool, optional
+        fix_corr: bool, optional
             Fix those matrices which correlations are mathematically incorrect.
             It sets the values over 1+err to 1 and the values less than -1-err
-            to zero.
-        eps : float, optional 
-            Allowed deviation from -1 and 1 to be ignored during
-            a checking. That is, the matrices are assumed incorrect
-            if at least one element has a value of <-1-eps or >1+eps.
-            The default is asuumed equal to 1e-5 since the values in ENDF-6 files
+            to zero. err is asuumed equal to 1e-5 since the values in ENDF-6 files
             are limited to 1e-6.
+
         """  
 
         # Create the directory if it does not exist
-        os.makedirs(save_to, exist_ok=True)
+        save_to = pathlib.Path(save_to)
+        save_to.mkdir(parents=True, exist_ok=True)
 
-        
-        for cov in self.covariances:
-            if fix_corr:
-                temp_df = cov.dataframe.copy()
-                if (cov.reaction_1 == cov.reaction_2) & (cov.zam_1 == cov.zam_2): 
-                    temp_df[:] = fix_corrs(cov, eps)
+        if fix_corr:
+            for cov in self.covariances:
 
-                if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
-                    temp_df.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
+                if (cov.zam_1 == cov.zam_2) & (cov.reaction_1 == cov.reaction_2):
+                    array_of_covs = cov.dataframe.to_numpy()
+                    diag = np.sqrt(np.diag(array_of_covs))
+                    outer = np.outer(diag, diag)
+                    corr = cov_to_corr(array_of_covs)       
                 else:
-                    print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
-            else:
-                if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
-                    cov.dataframe.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
-                else:
-                    print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
+                    cov_1 = self.get_by_params(cov.zam_1, cov.zam_1, cov.reaction_1, cov.reaction_1)
+                    diag_1 = np.sqrt(np.diag(cov_1.dataframe.to_numpy()))       
+                    cov_2 = self.get_by_params(cov.zam_2, cov.zam_2, cov.reaction_2, cov.reaction_2)
+                    diag_2 = np.sqrt(np.diag(cov_2.dataframe.to_numpy()))
+
+                    outer  = np.outer(diag_1, diag_2)
+
+                    array_of_covs = cov.dataframe.to_numpy()
+                    corr = np.divide(array_of_covs, outer,
+                                        out = np.zeros_like(array_of_covs),
+                                        where = outer != 0)
+
+                if fix_corr: corr = np.clip(corr, -1.0 - eps, 1.0 + eps)
+
+                temp_df    = cov.dataframe.copy()
+                temp_df[:] = corr * outer       
+                self._save_as_excel(temp_df, save_to / f"{cov}.xlsx")
 
         print('------------------------------------------------')
         print('The covariances have been exported successfully.')
@@ -1301,6 +1308,9 @@ class Covariance():
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.zam_1!r}-{self.zam_2!r}, {self.reaction_1!r}-{self.reaction_2!r}, {(len(self.group_structure)-1)!r})")
+
+    def __str__(self):
+        return f"{self.zam_1}-{self.zam_2}-{self.reaction_1}-{self.reaction_2}"
 
     @property
     def library(self) -> str | None:
