@@ -957,14 +957,14 @@ class Covariances():
 
                 if is_positive:
                     number_of_positive += 1
-                    text_file.write(f'The matrix  {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} is positive semi-definite. The eigenvalues - \n[{eigenvalues}] \n\n')
+                    text_file.write(f'The matrix  {cov} is positive semi-definite. The eigenvalues - \n[{eigenvalues}] \n\n')
                 
                 elif np.any(np.iscomplex(eigenvalues)):
                     number_of_complex += 1
                     first_complex = get_complex(eigenvalues)
                     ratio = np.abs(eigenvalues[first_complex])/np.max(eigenvalues).real
                     incorrect_ratios.append(ratio)
-                    text_file.write(f'The matrix  {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} contains complex values. \
+                    text_file.write(f'The matrix  {cov} contains complex values. \
                                     \nThe first complelx eigenvalue at g={first_complex+1}. \
                                     \nThe ratio is {ratio}. \
                                     \nThe eigenvalues - \n[{eigenvalues}] \n\n')                    
@@ -973,7 +973,7 @@ class Covariances():
                     first_negative = get_negative(eigenvalues)
                     ratio = np.abs(eigenvalues[first_negative])/np.max(eigenvalues)
                     incorrect_ratios.append(ratio)
-                    text_file.write(f'The matrix {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} is not positive semi-definite. \
+                    text_file.write(f'The matrix {cov} is not positive semi-definite. \
                                     \nThe first negative eigenvalue at g={first_negative+1}. \
                                     \nThe ratio is {ratio}. \
                                     \nThe eigenvalues - \n[{eigenvalues}] \n\n') 
@@ -1022,7 +1022,7 @@ class Covariances():
 
                 if np.any(corr > 1+eps) | np.any(corr < -1-eps):
                     number_of_corr += 1
-                    text_file.write(f'The correlation matrix {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} is not correct.  \n{corr}\n')
+                    text_file.write(f'The correlation matrix {cov} is not correct.  \n{corr}\n')
                     
         text_file.write(f'The number of incorrect correlation matrices is {number_of_corr} of {number_of_symmetric} symmetric matrices among a total number of {len(self.covariances)} matrices')
         text_file.close()
@@ -1091,7 +1091,7 @@ class Covariances():
             temp_df    = cov.dataframe.copy()
             temp_df[:] = corr
 
-            self._save_as_excel(temp_df, save_to / f"{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx")
+            self._save_as_excel(temp_df, save_to / f"{cov}.xlsx")
 
         print('-------------------------------------------------')
         print('The correlations have been exported successfully.')
@@ -1122,7 +1122,7 @@ class Covariances():
                     # Fix data for incorrect indices
                     if len(incorrect_indices) > 0:
                         number_of_matrices += 1
-                        text_file.write(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} has been fixed. \n')
+                        text_file.write(f'{cov} has been fixed. \n')
 
                         for i in incorrect_indices:
                             # Firstly, fix covariances when the reactions are not the same
