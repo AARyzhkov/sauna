@@ -709,10 +709,10 @@ class Sensitivity():
     group_structure : numpy.ndarray
         Energy grid for the sensitivity vector. Contains the number of
         elements equal to G, the number of energy groups, + 1.
-    sensitivity_vector : np.ndarray
+    sensitivity_vector : numpy.ndarray
         Sensitivity vector, i.e. array of relative sensetivities for each
         group.
-    uncertainties : numpy.ndarray
+    uncertainty_vector : numpy.ndarray
         Array of statistical uncertainties for each value in the list of the 
         sensitivity_vector attribute.
 
@@ -726,7 +726,7 @@ class Sensitivity():
         self._uncertainty: Optional[float] = None
         self._group_structure: Sequence[float] = []
         self._sensitivity_vector: Sequence[float] = []
-        self._uncertainties: Optional[Sequence[float]] = None
+        self._uncertainty_vector: Optional[Sequence[float]] = None
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.functional!r}, {self.zam!r}, {self.reaction!r}, {(len(self.group_structure)-1)!r})")
