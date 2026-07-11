@@ -289,7 +289,7 @@ class Sensitivities():
         denom_name = sensitivities_prompt.functionals[0]
 
         for zam in sensitivities_nom.zams:
-            zam_senses = sensitivities_prompt.get_by_zam(zam)
+            zam_senses = sensitivities_nom.get_by_zam(zam)
 
             for nom_sens in zam_senses:
                 prompt_sens = sensitivities_prompt.get_by_params(denom_name, zam, nom_sens.reaction)
@@ -854,6 +854,6 @@ class Sensitivity():
 
         """  
 
-        sensitivities = Serpent.read(file)
+        sensitivities = SCALE.read(file)
 
         return next(sensitivity for sensitivity in sensitivities if (sensitivity.functional == self.functional) & (sensitivity.zam == self.zam) & (sensitivity.reaction == self.reaction))
