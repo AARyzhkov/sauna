@@ -79,11 +79,11 @@ class Covariances():
     
     @group_structure.setter
     def group_structure(self, group_structure: Sequence[float]) -> None:
-        group_number = len(group_structure)
-        if group_number >=2 &  group_number <= 1501:
+        group_number = len(group_structure) - 1
+        if (group_number >= 1) & (group_number <= 1500):
             self._group_structure = np.array(group_structure)
         else:
-            raise ValueError(f'The number of group must be between 1 and 1500, but {group_number-1} is provided')
+            raise ValueError(f'The number of group must be between 1 and 1500, but {group_number} is provided')
 
     @property
     def covariances(self) -> list[Covariance]:
@@ -329,9 +329,9 @@ class Covariances():
                         'SI'   : [140280, 140290, 140300],
                         'CR'   : [240500, 240520, 240530],
                         'MN'   : [250550],                 
-                        'FE'   : [260540, 250560, 260570],
+                        'FE'   : [260540, 260560, 260570],
                         'NI'   : [280580, 280600],       
-                        'CU'   : [290630,290650],
+                        'CU'   : [290630, 290650],
                         'ZN'   : [300640, 300660, 300670, 300680, 300700],
                         'ZR'   : [400900, 400910, 400920, 400930, 400940, 400950, 400960],
                         'MO'   : [420920, 420940, 420950, 420960, 420970, 420980, 421000],
@@ -516,7 +516,7 @@ class Covariances():
         covariance.dataframe = pd.read_excel(path).fillna(0)
 
         # Set the MF number based upon the MT number
-        if first_mt == 251:
+        if covariance.reaction_1 == 251:
             covariance.mf = 34
         elif first_mt in {452, 455, 456}:
             covariance.mf = 31
@@ -596,7 +596,7 @@ class Covariances():
                             'Cr53'    : 240530,
                             'Mn55'    : 250550,
                             'Fe54'    : 260540,
-                            'Fe56'    : 250560,
+                            'Fe56'    : 260560,
                             'Fe57'    : 260570,
                             'Ni58'    : 280580,
                             'Ni60'    : 280600,

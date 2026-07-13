@@ -6,10 +6,11 @@ build-backend = "setuptools.build_meta"
 name = "sauna"
 authors = [{name = "Alexander Ryzhkov", email = "Alexander_Ryzhkov@outlook.com"}]
 description = "SAUNA: A Python package for sensitivity and uncertainty analysis"
-readme = "README.md"
-dynamic = ["version"]
-requires-python = ">=3.8"
 license = {file = "LICENSE"}
+dynamic = ["version", "readme"]
+requires-python = ">=3.8"
+keywords = ["sauna", "sensitivity", "uncertainty", "nuclear data", "target accuracy requirements",
+            "similarity assessment", "uncertainty quantification"]
 classifiers=[
              "Development Status :: 4 - Beta",
              "Intended Audience :: Developers",
@@ -18,7 +19,7 @@ classifiers=[
              "Topic :: Scientific/Engineering",  
              "License :: OSI Approved :: MIT License",  
              "Natural Language :: English",
-             "Operating System :: POSIX :: Unix",        
+             "Operating System :: Unix",        
              "Programming Language :: Python :: 3",
              "Programming Language :: Python :: 3.8",
             ]
@@ -28,12 +29,15 @@ dependencies = ["sandy", "serpentTools", "numpy", "scipy", "pandas", "matplotlib
 [project.optional-dependencies]
 docs = ["jupyter"]
 
-
 [tool.setuptools.packages.find]
 include = ["sauna*"]
 
 [tool.setuptools.dynamic]
+version = {attr = "sauna.__version__"}
+readme = {file = "README.md"}
 
 [project.urls]
-
-        
+Homepage = "https://sauna-dev.gitbook.io"
+Documentation = "https://sauna-dev.gitbook.io"
+Repository = "https://github.com/AARyzhkov/sauna.git"
+Issues = "https://github.com/AARyzhkov/sauna/issues"
