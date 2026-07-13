@@ -294,8 +294,8 @@ class Plot():
             zam = sensitivity.zam
             charge = round(zam / 1e4)
             mass_number = str(round((zam - charge*1e4)/10))
-            if int(str(zam)[-1]): mass_number.append('m')
-            if mass_number == '0': mass_number = '\mathrm{nat}'
+            if int(str(zam)[-1]) : mass_number += '\mathrm{m}'
+            if mass_number == '0': mass_number  = '\mathrm{nat}'
             symbol = ATOMIC_NUMBERS[charge]
 
             # Normalize the plotting data
@@ -413,11 +413,11 @@ class Plot():
             charge_2 = round(zam_2 / 1e4)
             mass_number_1 = str(round((zam_1 - charge_1*1e4)/10))
             mass_number_2 = str(round((zam_2 - charge_2*1e4)/10))
-            if int(str(zam_1)[-1]): mass_number_1.append('m')
-            if mass_number_1 == '0': mass_number_1 = '\mathrm{nat}'
+            if int(str(zam_1)[-1]) : mass_number_1 += '\mathrm{m}'
+            if mass_number_1 == '0': mass_number_1  = '\mathrm{nat}'
             symbol_1 = ATOMIC_NUMBERS[charge_1]
-            if int(str(zam_2)[-1]): mass_number_2.append('m')
-            if mass_number_2 == '0': mass_number_1 = '\mathrm{nat}'
+            if int(str(zam_2)[-1]) : mass_number_2 += '\mathrm{m}'
+            if mass_number_2 == '0': mass_number_2  = '\mathrm{nat}'
             symbol_2 = ATOMIC_NUMBERS[charge_2]
 
             reaction_1 = LATEX_REACTIONS[reaction_1]
@@ -485,7 +485,7 @@ class Plot():
         tick_step : int, optional
             Number of ticks between numbers
         type : str, optional
-            Type of plot: {'matplotlib', 'seaborn'}
+            Type of plot: {'matplotlib'}
 
         """      
 
@@ -501,13 +501,13 @@ class Plot():
         zam_2 = covariance.zam_2
         charge_1 = round(zam_1 / 1e4)
         charge_2 = round(zam_2 / 1e4)
-        mass_number_1 = str(round((zam_1 - charge_2*1e4)/10))
-        mass_number_2 = str(round((zam_1 - charge_2*1e4)/10))
-        if int(str(zam_1)[-1]): mass_number_1.append('m')
-        if mass_number_1 == '0': mass_number_1 = '\mathrm{nat}'
+        mass_number_1 = str(round((zam_1 - charge_1*1e4)/10))
+        mass_number_2 = str(round((zam_2 - charge_2*1e4)/10))
+        if int(str(zam_1)[-1]) : mass_number_1 += '\mathrm{m}'
+        if mass_number_1 == '0': mass_number_1  = '\mathrm{nat}'
         symbol_1 = ATOMIC_NUMBERS[charge_1]
-        if int(str(zam_2)[-1]): mass_number_2.append('m')
-        if mass_number_2 == '0': mass_number_2 = '\mathrm{nat}'
+        if int(str(zam_2)[-1]) : mass_number_2 += '\mathrm{m}'
+        if mass_number_2 == '0': mass_number_2  = '\mathrm{nat}'
         symbol_2 = ATOMIC_NUMBERS[charge_2]
 
         reaction_1 = LATEX_REACTIONS[reaction_1]
@@ -517,6 +517,10 @@ class Plot():
         label_2 = f'$^{{{mass_number_2}}}${symbol_2}${reaction_2}$'
 
         if type == 'seaborn':
+            try:
+                import seaborn as sns
+            except:
+                raise ModuleNotFoundError("Seaborn is not found, install it or use 'matplotlib'")
             ticklabels = [i     for i in range(1, group_number+1, 1)][::-1]
             xticks     = [i+0.5 for i in range(0, group_number, tick_step)]
             yticks     = [i-0.5 for i in range(tick_step, group_number+tick_step, tick_step)]
@@ -524,7 +528,8 @@ class Plot():
             cmap = sns.diverging_palette(240, 10, as_cmap=True)
             sns.heatmap(covmatrix, cmap=cmap, center=0, square=True, linewidths=.5,
                         xticklabels=ticklabels, yticklabels=ticklabels)
-
+            ax.invert_yaxis()
+            ax.invert_xaxis()
             ax.set_xticks(xticks)
             ax.set_yticks(yticks)
             ax.set_xlabel(f'{label_2}', fontsize='medium')
@@ -551,7 +556,7 @@ class Plot():
             cb.ax.tick_params(axis='y', pad = 30)
 
         else:
-            print(f'There is no type "{type}" implemented. Set "seaborn" or "matplotlib"')
+            raise NotImplementedError(f'There is no type "{type}" implemented. Set "matplotlib" or "seaborn".')
 
         plt.subplots_adjust(bottom=0.2)
         fig.savefig(f"{name}.{format}", format = format, dpi=1000)
@@ -621,13 +626,13 @@ class Plot():
         zam_2 = covariance.zam_2
         charge_1 = round(zam_1 / 1e4)
         charge_2 = round(zam_2 / 1e4)
-        mass_number_1 = str(round((zam_1 - charge_2*1e4)/10))
-        mass_number_2 = str(round((zam_1 - charge_2*1e4)/10))
-        if int(str(zam_1)[-1]): mass_number_1.append('m')
-        if mass_number_1 == '0': mass_number_1 = '\mathrm{nat}'
+        mass_number_1 = str(round((zam_1 - charge_1*1e4)/10))
+        mass_number_2 = str(round((zam_2 - charge_2*1e4)/10))
+        if int(str(zam_1)[-1]) : mass_number_1 += '\mathrm{m}'
+        if mass_number_1 == '0': mass_number_1  = '\mathrm{nat}'
         symbol_1 = ATOMIC_NUMBERS[charge_1]
-        if int(str(zam_2)[-1]): mass_number_2.append('m')
-        if mass_number_2 == '0': mass_number_2 = '\mathrm{nat}'
+        if int(str(zam_2)[-1]) : mass_number_2 += '\mathrm{m}'
+        if mass_number_2 == '0': mass_number_2  = '\mathrm{nat}'
         symbol_2 = ATOMIC_NUMBERS[charge_2]
 
         reaction_1 = LATEX_REACTIONS[reaction_1]
