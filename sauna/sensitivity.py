@@ -289,7 +289,7 @@ class Sensitivities():
         denom_name = sensitivities_prompt.functionals[0]
 
         for zam in sensitivities_nom.zams:
-            zam_senses = sensitivities_prompt.get_by_zam(zam)
+            zam_senses = sensitivities_nom.get_by_zam(zam)
 
             for nom_sens in zam_senses:
                 prompt_sens = sensitivities_prompt.get_by_params(denom_name, zam, nom_sens.reaction)
@@ -709,10 +709,10 @@ class Sensitivity():
     group_structure : numpy.ndarray
         Energy grid for the sensitivity vector. Contains the number of
         elements equal to G, the number of energy groups, + 1.
-    sensitivity_vector : np.ndarray
+    sensitivity_vector : numpy.ndarray
         Sensitivity vector, i.e. array of relative sensetivities for each
         group.
-    uncertainties : numpy.ndarray
+    uncertainty_vector : numpy.ndarray
         Array of statistical uncertainties for each value in the list of the 
         sensitivity_vector attribute.
 
@@ -726,7 +726,7 @@ class Sensitivity():
         self._uncertainty: Optional[float] = None
         self._group_structure: Sequence[float] = []
         self._sensitivity_vector: Sequence[float] = []
-        self._uncertainties: Optional[Sequence[float]] = None
+        self._uncertainty_vector: Optional[Sequence[float]] = None
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.functional!r}, {self.zam!r}, {self.reaction!r}, {(len(self.group_structure)-1)!r})")
@@ -854,6 +854,6 @@ class Sensitivity():
 
         """  
 
-        sensitivities = Serpent.read(file)
+        sensitivities = SCALE.read(file)
 
         return next(sensitivity for sensitivity in sensitivities if (sensitivity.functional == self.functional) & (sensitivity.zam == self.zam) & (sensitivity.reaction == self.reaction))
