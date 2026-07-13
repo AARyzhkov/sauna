@@ -490,35 +490,37 @@ class Covariances():
         
         print('The covariances have been imported successfully.')
 
-    def from_excel(self, file: str) -> None:
+    def from_excel(self, path: str) -> None:
         """Import a covariance matrix from an .xlsx file 
         to the Covariances instance.
 
         Parameters
         ----------
         file : str
-            Path to a .xlsx 
+            Path to an .xlsx file
 
         """
 
-        fname = file.name.split('.')[0]
-        zam_1, zam_2, first_mt, second_mt = fname.split('-')
-
+        parts = pathlib.Path(path).stem.split('-')
+        if len(parts) != 4:
+            raise ValueError(f"Inorrect format {parts}. 'zam_1-zam_2-reaction_1-reaction_2' is expected.")
+        
+        zam_1, zam_2, first_mt, second_mt = map(int, parts)
         covariance = Covariance()
         covariance.library = self.library
         covariance.group_structure = self.group_structure
-        covariance.zam_1 = int(zam_1)
-        covariance.zam_2 = int(zam_2)
-        covariance.reaction_1 = int(first_mt)
-        covariance.reaction_2 = int(second_mt)
-        covariance.dataframe = pd.read_excel(file).fillna(0)
+        covariance.zam_1 = zam_1
+        covariance.zam_2 = zam_2
+        covariance.reaction_1 = first_mt
+        covariance.reaction_2 = second_mt
+        covariance.dataframe = pd.read_excel(path).fillna(0)
 
         # Set the MF number based upon the MT number
         if covariance.reaction_1 == 251:
             covariance.mf = 34
-        elif (covariance.reaction_1 == 452) | (covariance.reaction_1 == 455) | (covariance.reaction_1 == 456):
+        elif first_mt in {452, 455, 456}:
             covariance.mf = 31
-        elif (covariance.reaction_1 == 1018):
+        elif first_mt == 1018:
             covariance.mf = 35
         else:
             covariance.mf = 33
@@ -537,15 +539,20 @@ class Covariances():
 
         """
         
-        covtype = '.xlsx'
-        path_folder = pathlib.Path(folder).glob(f'*{covtype}')
+        path_folder = pathlib.Path(folder).glob(f'*.xlsx')
         paths = [p for p in path_folder if p.is_file()]
+
+        if not paths:
+            raise ValueError(f"There is no .xlsx file in {folder}")
         
         print('Importing covariance data from Excels.')
         for path in paths:
-            self.from_excel(path)
+            try:
+                self.from_excel(path)
+            except Exception as e:
+                print(e)
         
-        print('The covariances have been imported successfully.')
+        print(f"The {len(self.covariances)} covariances have been imported successfully.")
 
     def from_commara(self, file: str) -> None:
         """Import covariance matrices from a COMMARA file to
@@ -773,6 +780,7 @@ class Covariances():
         -----
             A large number of groups takes considerably more time for
             the AmpxCOVConverter work. The 56-group structure is recommended to use.
+
         """
 
         HEAD_LINES = 2
@@ -957,14 +965,14 @@ class Covariances():
 
                 if is_positive:
                     number_of_positive += 1
-                    text_file.write(f'The matrix  {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} is positive semi-definite. The eigenvalues - \n[{eigenvalues}] \n\n')
+                    text_file.write(f'The matrix  {cov} is positive semi-definite. The eigenvalues - \n[{eigenvalues}] \n\n')
                 
                 elif np.any(np.iscomplex(eigenvalues)):
                     number_of_complex += 1
                     first_complex = get_complex(eigenvalues)
                     ratio = np.abs(eigenvalues[first_complex])/np.max(eigenvalues).real
                     incorrect_ratios.append(ratio)
-                    text_file.write(f'The matrix  {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} contains complex values. \
+                    text_file.write(f'The matrix  {cov} contains complex values. \
                                     \nThe first complelx eigenvalue at g={first_complex+1}. \
                                     \nThe ratio is {ratio}. \
                                     \nThe eigenvalues - \n[{eigenvalues}] \n\n')                    
@@ -973,7 +981,7 @@ class Covariances():
                     first_negative = get_negative(eigenvalues)
                     ratio = np.abs(eigenvalues[first_negative])/np.max(eigenvalues)
                     incorrect_ratios.append(ratio)
-                    text_file.write(f'The matrix {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} is not positive semi-definite. \
+                    text_file.write(f'The matrix {cov} is not positive semi-definite. \
                                     \nThe first negative eigenvalue at g={first_negative+1}. \
                                     \nThe ratio is {ratio}. \
                                     \nThe eigenvalues - \n[{eigenvalues}] \n\n') 
@@ -1022,7 +1030,7 @@ class Covariances():
 
                 if np.any(corr > 1+eps) | np.any(corr < -1-eps):
                     number_of_corr += 1
-                    text_file.write(f'The correlation matrix {cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} is not correct.  \n{corr}\n')
+                    text_file.write(f'The correlation matrix {cov} is not correct.  \n{corr}\n')
                     
         text_file.write(f'The number of incorrect correlation matrices is {number_of_corr} of {number_of_symmetric} symmetric matrices among a total number of {len(self.covariances)} matrices')
         text_file.close()
@@ -1030,6 +1038,24 @@ class Covariances():
         print('-------------------------------------------')
         print(f'The number of incorrect correlation matrices is {number_of_corr} of {number_of_symmetric} symmetric matrices among a total number of {len(self.covariances)} matrices')
         print('-------------------------------------------')
+
+    def _save_as_excel(self, dataframe: pd.DataFrame, path: pathlib.Path) -> None :
+        """Save dataframe to as an Excel file and checks if file exists
+        before saving to prevent accidental overwrites.
+        
+        Parameters
+        ----------
+        dataframe : pandas.DataFrame
+            Dataframe that is going to be saved as an Excel file
+        path : pathlib.Path 
+            Path to the file being created
+
+        """
+
+        if path.exists():
+            print(f"File already exists: {path.name}")
+        else:
+            dataframe.to_excel(path, index=False)
 
     def export_corrs(self, save_to: str = './correlations/', fix_corr: bool = False, eps: float = 1e-5) -> None:
         """Auxiliary method to export the correlation matrices based upon
@@ -1048,25 +1074,34 @@ class Covariances():
 
         """  
 
-        # Create the directory if it does not exist
-        os.makedirs(save_to, exist_ok=True)
+        save_to = pathlib.Path(save_to)
+        save_to.mkdir(parents=True, exist_ok=True)
 
         for cov in self.covariances:
-            if cov.reaction_1 == cov.reaction_2:
+            if (cov.zam_1 == cov.zam_2) & (cov.reaction_1 == cov.reaction_2):
                 array_of_covs = cov.dataframe.to_numpy()
                 corr = cov_to_corr(array_of_covs)
 
-                if fix_corr:
-                    corr = np.where(corr >  1+eps,  1, corr)                 
-                    corr = np.where(corr < -1-eps, -1, corr)
+            else:
+                cov_1 = self.get_by_params(cov.zam_1, cov.zam_1, cov.reaction_1, cov.reaction_1)
+                stds_1 = np.sqrt(np.diag(cov_1.dataframe.to_numpy()))
 
-            temp_df = cov.dataframe.copy()
+                cov_2 = self.get_by_params(cov.zam_2, cov.zam_2, cov.reaction_2, cov.reaction_2)
+                stds_2 = np.sqrt(np.diag(cov_2.dataframe.to_numpy()))
+                
+                outer  = np.outer(stds_1, stds_2)
+                    
+                array_of_covs = cov.dataframe.to_numpy()
+                corr = np.divide(array_of_covs, outer,
+                                    out = np.zeros_like(array_of_covs),
+                                    where = outer != 0)
+                
+            if fix_corr: corr = np.clip(corr, -1.0 - eps, 1.0 + eps)
+
+            temp_df    = cov.dataframe.copy()
             temp_df[:] = corr
 
-            if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
-                temp_df.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
-            else:
-                print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
+            self._save_as_excel(temp_df, save_to / f"{cov}.xlsx")
 
         print('-------------------------------------------------')
         print('The correlations have been exported successfully.')
@@ -1081,37 +1116,36 @@ class Covariances():
         """       
 
         number_of_matrices = 0
-        text_file = open(f'{self.library}-limited.txt', "a+")
+        log_path = pathlib.Path(f'{self.library}-limited.txt')
 
-        for cov in self.covariances:
-            if cov.reaction_1 == cov.reaction_2:
-                # Get the covs for given zam if reaction_1 is not equal to reaction_2
-                zam_covs = [i for i in self.get_by_zam(cov.zam_1) if i.reaction_1 != i.reaction_2]
+        with open(log_path, "a+") as text_file:
+            for cov in self.covariances:
+                if (cov.zam_1 == cov.zam_2) & (cov.reaction_1 == cov.reaction_2):
+                    # Get the covs for given zam if reaction_1 is not equal to reaction_2
+                    asym_covs = [i for i in self.get_by_zam(cov.zam_1) if (i.zam_1 != i.zam_2) | (i.reaction_1 != i.reaction_2)]
 
-                # Get the indices where the values are incorrect
-                array_of_covs = cov.dataframe.to_numpy()
-                diag = np.sqrt(np.diag(array_of_covs))
-                incorrect_indices = np.where(diag > 1)[0]
+                    # Get the indices where the values are incorrect
+                    array_of_covs = cov.dataframe.to_numpy()
+                    stds = np.sqrt(np.diag(array_of_covs))
+                    incorrect_indices = np.where(stds > 1)[0]
 
-                # Fix data for incorrect indices
-                if len(incorrect_indices) > 0:
-                    number_of_matrices += 1
-                    text_file.write(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2} has been fixed. \n')
+                    # Fix data for incorrect indices
+                    if len(incorrect_indices) > 0:
+                        number_of_matrices += 1
+                        text_file.write(f'{cov} has been fixed. \n')
 
-                    for i in incorrect_indices:
-                        # Firstly, fix covariances when the reactions are not the same
-                        for zam_cov in zam_covs:
-                            if zam_cov.reaction_1 == cov.reaction_1:
-                                zam_cov.dataframe.values[i,:] /= diag[i]  
-                            elif zam_cov.reaction_2 == cov.reaction_1:
-                                zam_cov.dataframe.values[:,i] /= diag[i]  
+                        for i in incorrect_indices:
+                            # Firstly, fix covariances when the reactions are not the same
+                            for asym_cov in asym_covs:
+                                if (asym_cov.zam_1 == cov.zam_1) & (asym_cov.reaction_1 == cov.reaction_1):
+                                    asym_cov.dataframe.iloc[i,:] /= stds[i]  
+                                elif (asym_cov.zam_2 == cov.zam_1) & (asym_cov.reaction_2 == cov.reaction_1):
+                                    asym_cov.dataframe.iloc[:,i] /= stds[i]  
 
-                        # Secondly fix covariances when the reactions are the same
-                        array_of_covs[i,:] /= diag[i]
-                        array_of_covs[:,i] /= diag[i]
-                        cov.dataframe.values[:,:] = array_of_covs
-
-        text_file.close()
+                            # Secondly fix covariances when the reactions are the same
+                            array_of_covs[i,:] /= stds[i]
+                            array_of_covs[:,i] /= stds[i]
+                            cov.dataframe[:] = array_of_covs
 
         print('-------------------------------------------')
         print(f'The number of matrices with over 100% values is {number_of_matrices} of a total number of {len(self.covariances)} matrices.')
@@ -1138,6 +1172,7 @@ class Covariances():
         The method is usually used when it iterated over all the
         ZAMs, therefore, cross-material correlations, corresponding
         to the second ZAM, are naturally accounted.
+
         """
 
         array = np.array([cov for cov in self.covariances if cov.zam_1 == zam])
@@ -1164,6 +1199,7 @@ class Covariances():
         when the first reaction has the correlation.
 
         """
+
         array = np.array([cov for cov in self.covariances if cov.reaction_1 == mt])
 
         return array
@@ -1202,34 +1238,41 @@ class Covariances():
         fix_corr : bool, optional
             Fix those matrices which correlations are mathematically incorrect.
             It sets the values over 1+err to 1 and the values less than -1-err
-            to zero.
-        eps : float, optional 
-            Allowed deviation from -1 and 1 to be ignored during
-            a checking. That is, the matrices are assumed incorrect
-            if at least one element has a value of <-1-eps or >1+eps.
-            The default is asuumed equal to 1e-5 since the values in ENDF-6 files
-            are limited to 1e-6.
+            to zero. The default is assumed equal to 1e-5 since the values in
+            ENDF-6 files are limited to 1e-6.
+
         """  
 
         # Create the directory if it does not exist
-        os.makedirs(save_to, exist_ok=True)
+        save_to = pathlib.Path(save_to)
+        save_to.mkdir(parents=True, exist_ok=True)
 
-        
-        for cov in self.covariances:
-            if fix_corr:
-                temp_df = cov.dataframe.copy()
-                if (cov.reaction_1 == cov.reaction_2) & (cov.zam_1 == cov.zam_2): 
-                    temp_df[:] = fix_corrs(cov, eps)
+        if fix_corr:
+            for cov in self.covariances:
 
-                if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
-                    temp_df.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
+                if (cov.zam_1 == cov.zam_2) & (cov.reaction_1 == cov.reaction_2):
+                    array_of_covs = cov.dataframe.to_numpy()
+                    diag = np.sqrt(np.diag(array_of_covs))
+                    outer = np.outer(diag, diag)
+                    corr = cov_to_corr(array_of_covs)       
                 else:
-                    print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
-            else:
-                if os.path.exists(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx') == False:   
-                    cov.dataframe.to_excel(f'./{save_to}/{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx', index=False)
-                else:
-                    print(f'{cov.zam_1}-{cov.zam_2}-{cov.reaction_1}-{cov.reaction_2}.xlsx exists')
+                    cov_1 = self.get_by_params(cov.zam_1, cov.zam_1, cov.reaction_1, cov.reaction_1)
+                    diag_1 = np.sqrt(np.diag(cov_1.dataframe.to_numpy()))       
+                    cov_2 = self.get_by_params(cov.zam_2, cov.zam_2, cov.reaction_2, cov.reaction_2)
+                    diag_2 = np.sqrt(np.diag(cov_2.dataframe.to_numpy()))
+
+                    outer  = np.outer(diag_1, diag_2)
+
+                    array_of_covs = cov.dataframe.to_numpy()
+                    corr = np.divide(array_of_covs, outer,
+                                        out = np.zeros_like(array_of_covs),
+                                        where = outer != 0)
+
+                if fix_corr: corr = np.clip(corr, -1.0 - eps, 1.0 + eps)
+
+                temp_df    = cov.dataframe.copy()
+                temp_df[:] = corr * outer       
+                self._save_as_excel(temp_df, save_to / f"{cov}.xlsx")
 
         print('------------------------------------------------')
         print('The covariances have been exported successfully.')
@@ -1277,6 +1320,9 @@ class Covariance():
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}({self.zam_1!r}-{self.zam_2!r}, {self.reaction_1!r}-{self.reaction_2!r}, {(len(self.group_structure)-1)!r})")
+
+    def __str__(self):
+        return f"{self.zam_1}-{self.zam_2}-{self.reaction_1}-{self.reaction_2}"
 
     @property
     def library(self) -> str | None:
