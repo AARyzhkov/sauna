@@ -780,6 +780,7 @@ class Covariances():
         -----
             A large number of groups takes considerably more time for
             the AmpxCOVConverter work. The 56-group structure is recommended to use.
+
         """
 
         HEAD_LINES = 2
@@ -1048,7 +1049,9 @@ class Covariances():
             Dataframe that is going to be saved as an Excel file
         path : pathlib.Path 
             Path to the file being created
+
         """
+
         if path.exists():
             print(f"File already exists: {path.name}")
         else:
@@ -1169,6 +1172,7 @@ class Covariances():
         The method is usually used when it iterated over all the
         ZAMs, therefore, cross-material correlations, corresponding
         to the second ZAM, are naturally accounted.
+
         """
 
         array = np.array([cov for cov in self.covariances if cov.zam_1 == zam])
@@ -1195,6 +1199,7 @@ class Covariances():
         when the first reaction has the correlation.
 
         """
+
         array = np.array([cov for cov in self.covariances if cov.reaction_1 == mt])
 
         return array
@@ -1222,19 +1227,19 @@ class Covariances():
         
         return next(cov for cov in self.covariances if (cov.zam_1 == zam_1) & (cov.zam_2 == zam_2) & (cov.reaction_1 == reaction_1) & (cov.reaction_2 == reaction_2))
 
-    def to_excels(self, save_to='./covariances/', fix_corr = False, eps = 1e-5):
+    def to_excels(self, save_to: str = './covariances/', fix_corr: bool = False, eps: float = 1e-5) -> None:
         """Export covariances in the Coviariances instance
         to Excel files.
 
         Parameters
         ----------
-        save_to: str, optional
+        save_to : str, optional
             Relative path to save the processed covariances, e.g., './BROND-3.1'.
-        fix_corr: bool, optional
+        fix_corr : bool, optional
             Fix those matrices which correlations are mathematically incorrect.
             It sets the values over 1+err to 1 and the values less than -1-err
-            to zero. err is asuumed equal to 1e-5 since the values in ENDF-6 files
-            are limited to 1e-6.
+            to zero. The default is assumed equal to 1e-5 since the values in
+            ENDF-6 files are limited to 1e-6.
 
         """  
 
